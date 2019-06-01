@@ -10,7 +10,6 @@ module.exports = {
   },
   module: {
     rules: [
-      //{test: /\.ts$/, use: 'ts-loader'},
       //{test: /\.tsx?$/, loader: 'ts-loader' }
       /*
       {
@@ -39,7 +38,7 @@ module.exports = {
   resolve: {
     extensions: [ '.ts', '.tsx', '.js' ]
   },
-	optimization: {
-		minimize: false
+  optimization: {
+    minimize: false
   },
 };
