@@ -1,0 +1,20 @@
+filesets:
+  default:
+    include:
+      - ".watchcode.yaml"
+      - "*"
+    exclude:
+      - ".watchcode.log"
+
+    exclude_gitignore: true
+    match_mode: "gitlike"
+
+tasks:
+  tsc:
+    fileset: default
+    commands:
+      - "npm run check-types"
+
+default_task: tsc
+sound: false
+notifications: true
