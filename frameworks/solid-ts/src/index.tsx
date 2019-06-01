@@ -1,5 +1,7 @@
 import { createRoot, createState, createEffect, onCleanup } from 'solid-js';
 
+import { Tabs } from "./Tabs";
+
 function Effects() {
   const [state, setState] = createState({
     a: 10,
@@ -65,10 +67,23 @@ function Effects() {
 }
 
 function App() {
+  let a = <Effects/>
+  let b = <Effects/>
+
+  let tabContents = [
+    {
+      name: "Tab A",
+      component: a,
+    },
+    {
+      name: "Tab B",
+      component: b,
+    }
+  ]
+
   return (
     <div>
-      Hello World
-      <Effects/>
+      <Tabs contents={tabContents}/>
     </div>
   )
 }
