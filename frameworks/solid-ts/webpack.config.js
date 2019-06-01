@@ -1,7 +1,13 @@
 const path = require('path');
 
+// const webpack = require('webpack');
+// const HtmlWebpackPlugin = require('html-webpack-plugin');
+// const CleanWebpackPlugin = require('clean-webpack-plugin');
+
 module.exports = {
-  entry: './src/index.tsx',
+  entry: {
+    app: './src/index.tsx'
+  },
   devtool : 'source-map',
   mode: 'development',
   output: {
@@ -38,7 +44,22 @@ module.exports = {
   resolve: {
     extensions: [ '.ts', '.tsx', '.js' ]
   },
+  plugins: [
+    // https://webpack.js.org/guides/hot-module-replacement
+    // new CleanWebpackPlugin(),
+    // new HtmlWebpackPlugin({
+    //   title: 'Hot Module Replacement'
+    // }),
+    // new webpack.HotModuleReplacementPlugin()
+  ],
   optimization: {
     minimize: false
   },
+  devServer: {
+    contentBase: path.join(__dirname, 'dist'),
+    watchContentBase: true,
+    //disableHostCheck: true,
+    //hot: true,
+    //inline: true,
+  }
 };
