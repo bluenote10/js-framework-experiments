@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Tabloo</title>
+
+    <script src="test.js"></script>
+
+  </head>
+  <body>
+    <script>
+      Module['onRuntimeInitialized'] = onRuntimeInitialized;
+      let add = Module.cwrap('add', 'number', ['number', 'number'])
+      function onRuntimeInitialized() {
+        console.log(add(1, 2))
+        console.log(add(100, 200))
+      }
+    </script>
+  </body>
+</html>
