@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Tabloo</title>
+
+    <script src="function.js"></script>
+
+  </head>
+  <body>
+    <script>
+      Module['onRuntimeInitialized'] = onRuntimeInitialized;
+      let int_sqrt = Module.cwrap('int_sqrt', 'number', ['number'])
+      function onRuntimeInitialized() {
+        console.log(int_sqrt(12))
+        console.log(int_sqrt(28))
+      }
+    </script>
+  </body>
+</html>

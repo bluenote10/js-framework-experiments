@@ -1,0 +1,11 @@
+*.out.js
+*.out.wasm
+
+emscripten_basics/hello.html
+emscripten_basics/hello.js
+emscripten_basics/hello.wasm
+
+emscripten_basics/function.js
+emscripten_basics/function.wasm
+
+
