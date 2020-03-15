@@ -18,24 +18,32 @@ const MapDiv = styled.div`
   border: 1px solid #DDD;
 `
 
-class Map extends React.Component {
-  private mapContainer: HTMLDivElement | null;
+interface MapProps {
+  tileServer: string
+}
 
-  constructor(props: {}) {
+class Map extends React.Component<MapProps> {
+  private mapContainer: HTMLDivElement | null;
+  private map: mapboxgl.Map | null;
+  private currentTileServer: string | null;
+
+  constructor(props: MapProps) {
     super(props);
     this.state = {};
     this.mapContainer = null;
+    this.map = null;
+    this.currentTileServer = null;
   }
 
   componentDidMount() {
-    const map = new mapboxgl.Map({
+    this.map = new mapboxgl.Map({
       container: this.mapContainer!,
       style: {
         version: 8,
         sources: {
           osm: {
             type: 'raster',
-            tiles: ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tiles: ["https://a.tile.openstreetmap.de/{z}/{x}/{y}.png"],
           }
         },
         layers: [{
@@ -48,21 +56,52 @@ class Map extends React.Component {
       //zoom: this.state.zoom
     });
 
+    this.map.on("load", m =>
+      this.setTileServer(this.props.tileServer)
+    )
+
+    /*
     map.on('move', () => {
-      /*
       this.setState({
         lng: map.getCenter().lng.toFixed(4),
         lat: map.getCenter().lat.toFixed(4),
         zoom: map.getZoom().toFixed(2)
       });
-      */
     });
+    */
+
+    //(map.getStyle().sources!["osm"] as any).tiles = ["https://a.tile.openstreetmap.de/${z}/${x}/${y}.png"]
+  }
+
+  componentWillReceiveProps(nextProps: MapProps) {
+    if (this.map != null) {
+      if (this.currentTileServer !== nextProps.tileServer) {
+        this.setTileServer(nextProps.tileServer)
+      }
+    }
+  }
+
+  setTileServer(tileServer: string) {
+    if (this.map != null) {
+      this.map.removeLayer("osm");
+      this.map.removeSource("osm");
+      this.map.addSource("osm", {
+        type: 'raster',
+        tiles: [tileServer],
+      })
+      this.map.addLayer({
+        id: 'osm',
+        type: 'raster',
+        source: 'osm',
+      })
+      this.currentTileServer = tileServer
+    }
   }
 
   render() {
     return (
       <OuterDiv>
-        <MapDiv ref={el => this.mapContainer = el} className='mapContainer' />
+        <MapDiv ref={el => this.mapContainer = el} />
       </OuterDiv>
     )
   }
