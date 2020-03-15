@@ -8,4 +8,7 @@ emscripten_basics/hello.wasm
 emscripten_basics/function.js
 emscripten_basics/function.wasm
 
+nim_emscripten/*.js
+nim_emscripten/*.wasm
+
 

@@ -1,6 +1,7 @@
 import { createRoot, createState, createEffect, onCleanup } from 'solid-js';
 
 import { Tabs } from "./Tabs";
+import { Typed } from "./typed";
 
 function Effects() {
   const [state, setState] = createState({
@@ -73,7 +74,7 @@ function App() {
   let tabContents = [
     {
       name: "Tab A",
-      component: a,
+      component: <Typed/>,
     },
     {
       name: "Tab B",
