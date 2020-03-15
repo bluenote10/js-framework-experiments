@@ -6,10 +6,15 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 
 mapboxgl.accessToken = 'MAPBOX_ACCESS_TOKEN';
 
+const OuterDiv = styled.div`
+  background: #fff;
+  padding-top: 20px;
+  padding-left: 20px;
+`
+
 const MapDiv = styled.div`
-  width: 80%;
+  width: 95%;
   height: 800px;
-  margin-top: 20px;
   border: 1px solid #DDD;
 `
 
@@ -56,9 +61,9 @@ class Map extends React.Component {
 
   render() {
     return (
-      <div>
+      <OuterDiv>
         <MapDiv ref={el => this.mapContainer = el} className='mapContainer' />
-      </div>
+      </OuterDiv>
     )
   }
 }
