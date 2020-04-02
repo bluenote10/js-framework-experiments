@@ -2,14 +2,19 @@
   "name": "svg-inkscape-anim",
   "version": "0.0.1",
   "description": "",
-  "main": "index.js",
+  "main": "index.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "ts-node --files index.ts -- --no-warnings"
   },
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@types/jsdom": "^16.2.0",
+    "@types/node": "^13.9.8",
+    "jsdom": "^16.2.2",
     "puppeteer": "^2.1.1",
+    "ts-node": "^8.8.1",
+    "typescript": "^3.8.3",
     "xml2js": "^0.4.23"
   }
 }
