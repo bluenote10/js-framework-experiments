@@ -12,17 +12,38 @@ if (false) {
   console.log("rect:", rect);
 }
 
-anime({
-  targets: '#path821',
-  /*
-  points: [
-    { value: 'm 29.482142,91.380952 c 0,0 15.119046,32.505958 41.577381,39.482138', }
-  ],
-  */
-  //translateX: 250,
-  //rotate: '1turn',
-  d: 'm 29.482142,91.380952 c 0,0 15.119046,32.505958 41.577381,39.482138',
-  //translateX: 25,
-  backgroundColor: '#FFF',
-  duration: 800
+if (false) {
+  anime({
+    targets: '#path821',
+    /*
+    points: [
+      { value: 'm 29.482142,91.380952 c 0,0 15.119046,32.505958 41.577381,39.482138', }
+    ],
+    */
+    //translateX: 250,
+    //rotate: '1turn',
+    d: [
+      'm 29.482142,91.380952 c 0,0 15.119046,32.505958 41.577381,39.482138',
+      'm 29.482142,91.380952 c 0,0 15.119046,32.505958 41.577381,49.482138'
+    ],
+    //translateX: 25,
+    backgroundColor: '#FFF',
+    duration: 800
+  });
+
+}
+
+var tl = anime.timeline({
+  easing: 'easeOutExpo',
+  duration: 750
 });
+
+tl
+.add({
+  targets: '#path20',
+  d: "M 66.523809,157.14881 106.27616,172.56129",
+})
+.add({
+  targets: '#path20',
+  d: "M 66.523808,157.14881 119.14309,79.863411",
+})
