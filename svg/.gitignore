@@ -2,3 +2,4 @@ node_modules/
 react_frontend/
 
 *.pdf
+generated.*
