@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as puppeteer from 'puppeteer';
-import * as xml2js from 'xml2js'
 import { fstat } from 'fs';
 
 import { JSDOM } from 'jsdom'
@@ -24,21 +23,6 @@ const DOMParser = new JSDOM().window.DOMParser
   await browser.close();
 })();
 */
-
-async function loadSvg(filename: string): Promise<unknown> {
-
-  const data = await fs.promises.readFile(path.join(__dirname, filename))
-  console.log(data)
-
-  const parser = new xml2js.Parser({
-    explicitChildren: true,
-    preserveChildrenOrder: true,
-  });
-  const xml = await parser.parseStringPromise(data)
-
-  console.log(JSON.stringify(xml, null, 2))
-  return xml
-}
 
 async function loadSvgDom(filename: string): Promise<SVGSVGElement> {
 
