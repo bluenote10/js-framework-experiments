@@ -136,7 +136,9 @@ function traverse(fused: SVGSVGElement, prev: SVGSVGElement, next: SVGSVGElement
 
 function generateScriptTag(url: string): Element {
   const doc = new JSDOM().window.document;
-  const el = doc.createElement('script');
+  // Element must be created under the svg namespace, to match its parent namespace.
+  // Otherwise an xmlns="http://www.w3.org/1999/xhtml" is created.
+  const el = doc.createElementNS("http://www.w3.org/2000/svg", 'script');
   el.setAttribute('type', "text/javascript");
   el.setAttribute('xlink:href', url);
   return el
@@ -145,6 +147,8 @@ function generateScriptTag(url: string): Element {
 function generateJS(allDiffs: AttrDiffMaps): string {
 
   let text = `
+  console.log("animating...")
+
   var tl = anime.timeline({
     easing: 'easeOutExpo',
     duration: 750
@@ -153,14 +157,18 @@ function generateJS(allDiffs: AttrDiffMaps): string {
   tl`
 
   for (const diff of allDiffs) {
-    let params = { target: `#${diff.id}` }
+    let params = {
+      targets: `#${diff.id}`
+    }
     for (let key of Object.keys(diff.diffs)) {
-      params[key] = diff.diffs[key][1]
+      let value = diff.diffs[key][1];
+      params[key] = ("" + (Number(value)) === value ? Number(value) : value)
     }
     console.log(params)
     text += `
     .add(
-      ${JSON.stringify(params)}
+      ${JSON.stringify(params)},
+      0
     )`
   }
 
