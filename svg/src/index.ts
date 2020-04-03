@@ -1,6 +1,5 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as puppeteer from 'puppeteer';
 import { fstat } from 'fs';
 
 import { JSDOM } from 'jsdom'
@@ -10,35 +9,15 @@ const Node = new JSDOM().window.Node
 const HTMLElement = new JSDOM().window.HTMLElement
 const DOMParser = new JSDOM().window.DOMParser
 
-/*
-(async() => {
-  const url = `file:${path.join(__dirname, 'drawing.svg')}`
-  console.log(url)
-
-  const browser = await puppeteer.launch();
-  const page = await browser.newPage();
-  await page.goto(url, {waitUntil: 'networkidle2'});
-  await page.pdf({path: 'page.pdf', format: 'A4'});
-
-  await browser.close();
-})();
-*/
-
 async function loadSvgDom(filename: string): Promise<SVGSVGElement> {
-
   const data = await fs.promises.readFile(path.join(__dirname, filename))
 
   const doc = new JSDOM(data).window.document;
 
-  //console.log(doc)
-  //console.log(doc.documentElement.innerHTML)
-  //console.log(JSON.stringify(doc, null, 2))
-
   const svg = doc.getElementsByTagName('svg')[0]
-
-  //console.log(svg.getElementsByTagName('g'))
-  //console.log(doc.getElementsByTagName('rect'))
-
+  if (svg == null) {
+    throw "Cannot find an `svg` tag in given XML data."
+  }
   return svg
 }
 
@@ -73,7 +52,6 @@ function diffElements(elA: Element, elB: Element): AttrDiffMap {
 }
 
 function traverse(fused: SVGSVGElement, prev: SVGSVGElement, next: SVGSVGElement, allDiffs: AttrDiffMaps) {
-
 
   next.childNodes.forEach( child => {
     if (child.nodeType == Node.ELEMENT_NODE) {
@@ -184,8 +162,8 @@ function diff(svgA: SVGSVGElement, svgB: SVGSVGElement) {
 async function run() {
   //let frameA = await loadSvgDom("svg_example.svg")
 
-  let frameA = await loadSvgDom("frame1.svg")
-  let frameB = await loadSvgDom("frame2.svg")
+  let frameA = await loadSvgDom("examples/frame1.svg")
+  let frameB = await loadSvgDom("examples/frame2.svg")
 
   diff(frameA, frameB)
 }

@@ -2,9 +2,9 @@
   "name": "svg-inkscape-anim",
   "version": "0.0.1",
   "description": "",
-  "main": "index.ts",
+  "main": "src/index.ts",
   "scripts": {
-    "start": "ts-node --files index.ts -- --no-warnings"
+    "start": "ts-node src/index.ts -- --no-warnings"
   },
   "author": "",
   "license": "ISC",
@@ -16,5 +16,9 @@
     "ts-node": "^8.8.1",
     "typescript": "^3.8.3",
     "w3c-xmlserializer": "^2.0.0"
+  },
+  "devDependencies": {
+    "eslint": "^6.8.0",
+    "prettier": "^2.0.2"
   }
 }
