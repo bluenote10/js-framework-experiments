@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { fstat } from 'fs';
+import { program } from 'commander';
 
 import { JSDOM } from 'jsdom'
 import * as serialize from "w3c-xmlserializer"
@@ -159,7 +159,16 @@ function diff(svgA: SVGSVGElement, svgB: SVGSVGElement) {
   fs.promises.writeFile("generated.js", generateJS(allDiffs))
 }
 
-async function run() {
+async function main() {
+  program
+    //.version('0.1.0')
+    .arguments('[svg-frame-file...]')
+    .action(function (svgFrameFile) {
+      console.log("here")
+      console.log(svgFrameFile);
+    });
+  program.parse(process.argv);
+
   //let frameA = await loadSvgDom("svg_example.svg")
 
   let frameA = await loadSvgDom("examples/frame1.svg")
@@ -168,8 +177,5 @@ async function run() {
   diff(frameA, frameB)
 }
 
-run()
-
-
-
+main()
 
