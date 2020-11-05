@@ -1,8 +1,0 @@
-node_modules/
-
-package-lock.json
-
-dist/*.js
-dist/*.js.map
-dist/styles.css
-
