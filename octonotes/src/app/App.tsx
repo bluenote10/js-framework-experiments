@@ -1,15 +1,23 @@
 import React from 'react';
 import { Button } from 'antd';
 import './App.css';
+import { Layout } from 'antd';
 
-import * as octokit from "./octokit"
+import Settings from "./Settings";
+
+import * as octokit from "./octokit";
+
+const { Header, Footer, Sider, Content } = Layout;
 
 // octokit.getData()
 
 const App = () => (
-  <div className="App">
-    <Button type="primary">Button</Button>
-  </div>
+  /*
+  <Layout>
+    <Content><Settings/></Content>
+  </Layout>
+  */
+  <Settings/>
 );
 
 export default App;
