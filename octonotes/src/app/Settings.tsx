@@ -9,6 +9,9 @@ import { PlusOutlined, GithubOutlined } from '@ant-design/icons';
 
 import styled from '@emotion/styled'
 
+import { Repo } from "./repo"
+
+
 const { Title } = Typography;
 const { Panel } = Collapse;
 
@@ -21,11 +24,11 @@ const StyledTitle = styled(Title)`
   margin-top: 20px;
 `
 
-function callback(key: string|string[]) {
-  console.log(key);
-}
+// ----------------------------------------------------------------------------
+// Header
+// ----------------------------------------------------------------------------
 
-const Header = (name: string) => {
+const Header = (repo: Repo) => {
   return (
     <Space>
       <Row wrap={false}>
@@ -36,6 +39,10 @@ const Header = (name: string) => {
     </Space>
   )
 }
+
+// ----------------------------------------------------------------------------
+// Repo form
+// ----------------------------------------------------------------------------
 
 const RepoForm = () => {
   const layout = {
@@ -81,8 +88,12 @@ const RepoForm = () => {
   )
 }
 
+// ----------------------------------------------------------------------------
+// Settings
+// ----------------------------------------------------------------------------
+
 type SettingsState = {
-  repos: string[]
+  repos: Repo[]
 }
 
 class Settings extends React.Component<{}, SettingsState> {
@@ -96,8 +107,15 @@ class Settings extends React.Component<{}, SettingsState> {
   }
 
   addRepo() {
+    let newRepo: Repo = {
+      userName: "",
+      repoName: "",
+      token: "",
+      enabled: true,
+      default: (this.state.repos.length == 0 ? true : false),
+    }
     this.setState({
-      repos: [...this.state.repos, "new"]
+      repos: [...this.state.repos, newRepo]
     })
   }
 
@@ -109,7 +127,12 @@ class Settings extends React.Component<{}, SettingsState> {
         {this.state.repos.map((repo, i) =>
           <Row gutter={[24, 24]}>
             <Col span={24}>
-              <Card title={Header(repo)} key={i} size="small" hoverable extra={<Switch></Switch>}>
+              <Card
+                key={i}
+                title={Header(repo)}
+                size="small"
+                hoverable extra={<Switch checked={repo.enabled}></Switch>}
+              >
                 <RepoForm/>
               </Card>
             </Col>
