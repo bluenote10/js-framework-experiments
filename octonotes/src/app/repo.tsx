@@ -12,7 +12,9 @@ export function getStoredRepos(): Repo[] {
   if (reposEntry != null) {
     return JSON.parse(reposEntry) as Repo[]
   } else {
-    return []
+    return [
+      createDefaultInitializedRepo(true)
+    ]
   }
 }
 
@@ -20,3 +22,12 @@ export function setStoredRepos(repos: Repo[]) {
   window.localStorage.setItem("repos", JSON.stringify(repos))
 }
 
+export function createDefaultInitializedRepo(isFirst: boolean): Repo {
+  return {
+    userName: "",
+    repoName: "",
+    token: "",
+    enabled: true,
+    default: (isFirst ? true : false),
+  }
+}

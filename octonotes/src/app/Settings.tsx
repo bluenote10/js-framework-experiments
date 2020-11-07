@@ -1,4 +1,5 @@
 import React from 'react';
+import { useCallback } from "react";
 
 import { Collapse } from 'antd';
 import { Button } from 'antd';
@@ -9,7 +10,7 @@ import { PlusOutlined, GithubOutlined } from '@ant-design/icons';
 
 import styled from '@emotion/styled'
 
-import { Repo } from "./repo"
+import { Repo, createDefaultInitializedRepo } from "./repo"
 
 
 const { Title } = Typography;
@@ -44,7 +45,12 @@ const Header = (repo: Repo) => {
 // Repo form
 // ----------------------------------------------------------------------------
 
-const RepoForm = () => {
+function RepoForm({
+  onDelete,
+}: {
+  onDelete: () => void,
+}) {
+
   const layout = {
     labelCol: { span: 8 },
     wrapperCol: { span: 16 },
@@ -80,9 +86,18 @@ const RepoForm = () => {
         <Input />
       </Form.Item>
       <Form.Item {...tailLayout}>
-        <Button type="primary" htmlType="submit">
-          Verify Access
-        </Button>
+        <Row justify="space-between">
+          <Col>
+            <Button type="primary" htmlType="submit">
+              Verify Access
+            </Button>
+          </Col>
+          <Col>
+            <Button danger onClick={onDelete}>
+              Delete
+            </Button>
+          </Col>
+        </Row>
       </Form.Item>
     </Form>
   )
@@ -92,67 +107,63 @@ const RepoForm = () => {
 // Settings
 // ----------------------------------------------------------------------------
 
-type SettingsState = {
-  repos: Repo[]
+type SettingsProps = {
+  repos: Repo[],
+  setRepos: (repos: Repo[]) => void,
 }
 
-class Settings extends React.Component<{}, SettingsState> {
+function Settings({ repos, setRepos }: SettingsProps) {
 
-  constructor() {
-    super({})
-    this.state = {
-      repos: []
-    }
-    this.addRepo = this.addRepo.bind(this)
+  const addRepo = useCallback(() => {
+    let newRepo = createDefaultInitializedRepo(repos.length === 0 ? true : false)
+    setRepos([...repos, newRepo])
+  }, [repos, setRepos]);
+
+  const toggleEnableRepo = (i: number) => {
+    let newRepos = [...repos];
+    newRepos[i].enabled = !newRepos[i].enabled;
+    setRepos(newRepos);
   }
 
-  addRepo() {
-    let newRepo: Repo = {
-      userName: "",
-      repoName: "",
-      token: "",
-      enabled: true,
-      default: (this.state.repos.length == 0 ? true : false),
-    }
-    this.setState({
-      repos: [...this.state.repos, newRepo]
-    })
+  const deleteRepo = (i: number) => {
+    let newRepos = [...repos];
+    newRepos.splice(i, 1);
+    setRepos(newRepos);
   }
 
-  render() {
-    return (
-      <>
-        <StyledTitle level={4}>Repositories</StyledTitle>
-        {/*<Collapse defaultActiveKey={[0]} onChange={callback} bordered={true}>*/}
-        {this.state.repos.map((repo, i) =>
-          <Row gutter={[24, 24]}>
-            <Col span={24}>
-              <Card
-                key={i}
-                title={Header(repo)}
-                size="small"
-                hoverable extra={<Switch checked={repo.enabled}></Switch>}
-              >
-                <RepoForm/>
-              </Card>
-            </Col>
-          </Row>
-        )}
-        {/*
-        <SpacedRow>
-          <Button type="primary" shape="circle" size="large" icon={<PlusOutlined />} onClick={this.addRepo}/>
-        </SpacedRow>
-        */}
-        <Row justify="center">
-          <Col>
-            <Button type="dashed" size="large" onClick={this.addRepo}>
-              <PlusOutlined /> Add Repository
-            </Button>
+  return (
+    <>
+      <StyledTitle level={4}>Repositories</StyledTitle>
+      {/*<Collapse defaultActiveKey={[0]} onChange={callback} bordered={true}>*/}
+      {repos.map((repo, i) =>
+        <Row key={i} gutter={[24, 24]}>
+          <Col span={24}>
+            <Card
+              title={Header(repo)}
+              size="small"
+              hoverable extra={<Switch checked={repo.enabled} onClick={() => toggleEnableRepo(i)}></Switch>}
+            >
+              <RepoForm
+                onDelete={() => deleteRepo(i)}
+              />
+            </Card>
           </Col>
         </Row>
-      </>
-    );
-  }
+      )}
+      {/*
+      <SpacedRow>
+        <Button type="primary" shape="circle" size="large" icon={<PlusOutlined />} onClick={this.addRepo}/>
+      </SpacedRow>
+      */}
+      <Row justify="center">
+        <Col>
+          <Button type="dashed" size="large" onClick={addRepo}>
+            <PlusOutlined /> Add Repository
+          </Button>
+        </Col>
+      </Row>
+    </>
+  );
 }
 
 export default Settings;
