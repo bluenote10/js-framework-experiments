@@ -1,5 +1,35 @@
+import { Repo } from "./repo";
+
 import { Octokit } from '@octokit/rest';
 
+async function expect<T>(promise: Promise<T>): Promise<[T?, Error?]> {
+  return promise
+    .then(data => [data, undefined] as [T, undefined])
+    .catch(error => Promise.resolve([undefined, error] as [undefined, Error]));
+}
+
+export async function verifyRepo(repo: Repo) {
+  const octokit = new Octokit({
+    auth: repo.token,
+  });
+
+  let [content, error] = await expect(octokit.repos.getContent({
+    owner: repo.userName,
+    repo: repo.repoName,
+    path: ".",
+  }))
+
+  if (content != null) {
+    console.log("Verification succeeded.")
+    return true;
+  } else {
+    console.log("Verification failed:")
+    console.log(error);
+    return false;
+  }
+}
+
+/*
 const auth = process.env.REACT_APP_AUTH;
 console.log(auth)
 
@@ -8,7 +38,6 @@ const octokit = new Octokit({
 });
 
 // Compare: https://docs.github.com/en/rest/reference/repos/#list-organization-repositories
-/*
 octokit.repos
   .listForOrg({
     org: "octokit",
@@ -17,16 +46,21 @@ octokit.repos
   .then(({ data }) => {
     console.log(data)
   });
-*/
 
-/*
-octokit.repos.listForAuthenticatedUser()
+  octokit.repos.listForAuthenticatedUser()
   .then(({ data }) => {
     console.log(data)
   });
 */
 
-export async function getData() {
+export async function experiment() {
+  const auth = process.env.REACT_APP_AUTH;
+  console.log(auth)
+
+  const octokit = new Octokit({
+    auth: auth,
+  });
+
   // https://octokit.github.io/rest.js/v18#repos-get-content
   let content = await octokit.repos.getContent({
     owner: "bluenote10",
@@ -60,6 +94,4 @@ export async function getData() {
     path: ".",
   })
   console.log(files)
-
-
 }

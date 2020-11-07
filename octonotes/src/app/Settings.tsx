@@ -1,28 +1,20 @@
 import React from 'react';
 import { useCallback } from "react";
 
-import { Collapse } from 'antd';
 import { Button } from 'antd';
 import { Typography } from 'antd';
-import { Space, Form, Input, Row, Col, Switch, Card } from 'antd';
+import { Space, Input, Row, Col, Switch, Card } from 'antd';
+import { RowProps } from 'antd/lib/row';
 
-import FormItemLabel from "antd/lib/form/FormItemLabel"
-
-import { PlusOutlined, GithubOutlined, ReadOutlined } from '@ant-design/icons';
+import { PlusOutlined, GithubOutlined, CheckCircleTwoTone, ExclamationCircleTwoTone, LoadingOutlined } from '@ant-design/icons';
 
 import styled from '@emotion/styled'
 
-import { Repo, Repos, createDefaultInitializedRepo } from "./repo"
-import { RowProps } from 'antd/lib/row';
+import { Repo, Repos, VerificationStatus, createDefaultInitializedRepo } from "./repo"
+import * as octokit from "./octokit"
 
 
 const { Title } = Typography;
-const { Panel } = Collapse;
-
-const SpacedRow = styled.div`
-  margin-top: 20px;
-  margin-bottom: 20px;
-`
 
 const StyledTitle = styled(Title)`
   margin-top: 20px;
@@ -118,10 +110,12 @@ function RepoForm({
   repo,
   onDelete,
   onEdited,
+  onMakeDefault,
 }: {
   repo: Repo,
   onDelete: () => void,
   onEdited: (repo: Repo) => void,
+  onMakeDefault: () => void,
 }) {
 
   const rowProps: RowProps = {justify: "end", align: "middle" as "middle", gutter: [8, 16]}
@@ -134,7 +128,7 @@ function RepoForm({
           <Input
             placeholder="Name within Notemarks"
             value={repo.name}
-            onChange={evt => {onEdited({...repo, name: evt.target.value})}}
+            onChange={evt => onEdited({...repo, name: evt.target.value})}
           />
         </Col>
       </Row>
@@ -144,7 +138,7 @@ function RepoForm({
           <Input
             placeholder="GitHub user name"
             value={repo.userName}
-            onChange={evt => {onEdited({...repo, userName: evt.target.value})}}
+            onChange={evt => onEdited({...repo, userName: evt.target.value})}
           />
         </Col>
       </Row>
@@ -154,7 +148,7 @@ function RepoForm({
           <Input
             placeholder="GitHub repository name"
             value={repo.repoName}
-            onChange={evt => {onEdited({...repo, repoName: evt.target.value})}}
+            onChange={evt => onEdited({...repo, repoName: evt.target.value})}
           />
         </Col>
       </Row>
@@ -164,7 +158,16 @@ function RepoForm({
           <Input.Password
             placeholder="GitHub access token"
             value={repo.token}
-            onChange={evt => {onEdited({...repo, token: evt.target.value})}}
+            onChange={evt => onEdited({...repo, token: evt.target.value})}
+          />
+        </Col>
+      </Row>
+      <Row {...rowProps}>
+        <Col>Default:</Col>
+        <Col span={16}>
+          <Switch
+            checked={repo.default}
+            onChange={() => onMakeDefault()}
           />
         </Col>
       </Row>
@@ -172,7 +175,14 @@ function RepoForm({
         <Col span={16}>
           <Row justify="space-between">
             <Col>
-              <Button type="primary" htmlType="submit">
+              <Button
+                type="primary"
+                onClick={async () => {
+                  onEdited({...repo, verified: VerificationStatus.inProgress});
+                  let verified = await octokit.verifyRepo(repo);
+                  onEdited({...repo, verified: (verified ? VerificationStatus.success : VerificationStatus.failed)});
+                }}
+              >
                 Verify Access
               </Button>
             </Col>
@@ -223,6 +233,18 @@ function Settings({ repos, setRepos }: SettingsProps) {
     setRepos(newRepos);
   }
 
+  const makeRepoDefault = (i: number) => {
+    let newRepos = [...repos];
+    for (let j = 0; j < newRepos.length; ++j) {
+      if (j === i) {
+        newRepos[j].default = true;
+      } else {
+        newRepos[j].default = false;
+      }
+    }
+    setRepos(newRepos);
+  }
+
   return (
     <>
       <StyledTitle level={4}>Repositories</StyledTitle>
@@ -235,11 +257,13 @@ function Settings({ repos, setRepos }: SettingsProps) {
               size="small"
               hoverable
               //extra={<Switch checked={repo.enabled} onClick={() => toggleEnableRepo(i)}></Switch>}
+              extra={<VerificationStatusIcon status={repo.verified}/>}
             >
               <RepoForm
                 repo={repo}
                 onDelete={() => deleteRepo(i)}
                 onEdited={(updatedRepo) => updateRepo(i, updatedRepo)}
+                onMakeDefault={() => makeRepoDefault(i)}
               />
             </Card>
           </Col>
@@ -261,4 +285,25 @@ function Settings({ repos, setRepos }: SettingsProps) {
   );
 }
 
+// ----------------------------------------------------------------------------
+// Helper
+// ----------------------------------------------------------------------------
+
+function VerificationStatusIcon({
+  status
+}: {
+  status: VerificationStatus
+}) {
+  if (status === VerificationStatus.unknown) {
+    return <CheckCircleTwoTone twoToneColor="#aaaaaa" style={{ fontSize: '24px'}}/>
+  } else if (status === VerificationStatus.failed) {
+    return <ExclamationCircleTwoTone twoToneColor="#eb2f96" style={{ fontSize: '24px'}}/>
+  } else if (status === VerificationStatus.success) {
+    return <CheckCircleTwoTone twoToneColor="#52c41a" style={{ fontSize: '24px'}}/>
+  } else {
+    return <LoadingOutlined style={{ fontSize: '24px'}}/>
+  }
+}
+
 export default Settings;
+

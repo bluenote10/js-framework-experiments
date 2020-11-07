@@ -1,5 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 
+export enum VerificationStatus {
+  unknown,
+  failed,
+  success,
+  inProgress,
+}
+
 export type Repo = {
   id: string,
   name: string,
@@ -8,6 +15,7 @@ export type Repo = {
   token: string,
   enabled: boolean,
   default: boolean,
+  verified: VerificationStatus,
 }
 
 export type Repos = Repo[]
@@ -36,5 +44,6 @@ export function createDefaultInitializedRepo(isFirst: boolean): Repo {
     token: "",
     enabled: true,
     default: (isFirst ? true : false),
+    verified: VerificationStatus.unknown,
   }
 }
