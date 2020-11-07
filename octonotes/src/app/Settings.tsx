@@ -6,11 +6,14 @@ import { Button } from 'antd';
 import { Typography } from 'antd';
 import { Space, Form, Input, Row, Col, Switch, Card } from 'antd';
 
-import { PlusOutlined, GithubOutlined } from '@ant-design/icons';
+import FormItemLabel from "antd/lib/form/FormItemLabel"
+
+import { PlusOutlined, GithubOutlined, ReadOutlined } from '@ant-design/icons';
 
 import styled from '@emotion/styled'
 
-import { Repo, createDefaultInitializedRepo } from "./repo"
+import { Repo, Repos, createDefaultInitializedRepo } from "./repo"
+import { RowProps } from 'antd/lib/row';
 
 
 const { Title } = Typography;
@@ -25,16 +28,23 @@ const StyledTitle = styled(Title)`
   margin-top: 20px;
 `
 
+const StyledRepoTitle = styled.span`
+  font-size: 16px;
+`
+
 // ----------------------------------------------------------------------------
 // Header
 // ----------------------------------------------------------------------------
 
-const Header = (repo: Repo) => {
+function Header(repo: Repo) {
   return (
     <Space>
-      <Row wrap={false}>
+      <Row wrap={false} align="middle" gutter={8}>
         <Col flex="auto">
           <GithubOutlined style={{ fontSize: '32px', color: '#666' }}/>
+        </Col>
+        <Col flex="auto">
+          <StyledRepoTitle>{repo.name}</StyledRepoTitle>
         </Col>
       </Row>
     </Space>
@@ -45,6 +55,7 @@ const Header = (repo: Repo) => {
 // Repo form
 // ----------------------------------------------------------------------------
 
+/*
 function RepoForm({
   onDelete,
 }: {
@@ -102,14 +113,89 @@ function RepoForm({
     </Form>
   )
 }
+*/
+function RepoForm({
+  repo,
+  onDelete,
+  onEdited,
+}: {
+  repo: Repo,
+  onDelete: () => void,
+  onEdited: (repo: Repo) => void,
+}) {
+
+  const rowProps: RowProps = {justify: "end", align: "middle" as "middle", gutter: [8, 16]}
+
+  return (
+    <>
+      <Row {...rowProps}>
+        <Col>Name:</Col>
+        <Col span={16}>
+          <Input
+            placeholder="Name within Notemarks"
+            value={repo.name}
+            onChange={evt => {onEdited({...repo, name: evt.target.value})}}
+          />
+        </Col>
+      </Row>
+      <Row {...rowProps}>
+        <Col>User:</Col>
+        <Col span={16}>
+          <Input
+            placeholder="GitHub user name"
+            value={repo.userName}
+            onChange={evt => {onEdited({...repo, userName: evt.target.value})}}
+          />
+        </Col>
+      </Row>
+      <Row {...rowProps}>
+        <Col>Repository:</Col>
+        <Col span={16}>
+          <Input
+            placeholder="GitHub repository name"
+            value={repo.repoName}
+            onChange={evt => {onEdited({...repo, repoName: evt.target.value})}}
+          />
+        </Col>
+      </Row>
+      <Row {...rowProps}>
+        <Col>Token:</Col>
+        <Col span={16}>
+          <Input.Password
+            placeholder="GitHub access token"
+            value={repo.token}
+            onChange={evt => {onEdited({...repo, token: evt.target.value})}}
+          />
+        </Col>
+      </Row>
+      <Row {...rowProps}>
+        <Col span={16}>
+          <Row justify="space-between">
+            <Col>
+              <Button type="primary" htmlType="submit">
+                Verify Access
+              </Button>
+            </Col>
+            <Col>
+              <Button danger onClick={onDelete}>
+                Delete
+              </Button>
+            </Col>
+          </Row>
+        </Col>
+      </Row>
+    </>
+  )
+}
+
 
 // ----------------------------------------------------------------------------
 // Settings
 // ----------------------------------------------------------------------------
 
 type SettingsProps = {
-  repos: Repo[],
-  setRepos: (repos: Repo[]) => void,
+  repos: Repos,
+  setRepos: (repos: Repos) => void,
 }
 
 function Settings({ repos, setRepos }: SettingsProps) {
@@ -131,20 +217,29 @@ function Settings({ repos, setRepos }: SettingsProps) {
     setRepos(newRepos);
   }
 
+  const updateRepo = (i: number, updatedRepo: Repo) => {
+    let newRepos = [...repos];
+    newRepos[i] = updatedRepo;
+    setRepos(newRepos);
+  }
+
   return (
     <>
       <StyledTitle level={4}>Repositories</StyledTitle>
       {/*<Collapse defaultActiveKey={[0]} onChange={callback} bordered={true}>*/}
       {repos.map((repo, i) =>
-        <Row key={i} gutter={[24, 24]}>
+        <Row key={repo.id} gutter={[24, 24]}>
           <Col span={24}>
             <Card
               title={Header(repo)}
               size="small"
-              hoverable extra={<Switch checked={repo.enabled} onClick={() => toggleEnableRepo(i)}></Switch>}
+              hoverable
+              //extra={<Switch checked={repo.enabled} onClick={() => toggleEnableRepo(i)}></Switch>}
             >
               <RepoForm
+                repo={repo}
                 onDelete={() => deleteRepo(i)}
+                onEdited={(updatedRepo) => updateRepo(i, updatedRepo)}
               />
             </Card>
           </Col>
