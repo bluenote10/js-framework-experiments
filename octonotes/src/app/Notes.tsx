@@ -1,8 +1,11 @@
 import React from 'react';
+import { useMemo } from "react";
 import { Typography } from 'antd';
 
 import styled from '@emotion/styled'
 
+import { Repos } from "./repo";
+import * as octokit from "./octokit";
 
 const { Title } = Typography;
 
@@ -14,7 +17,12 @@ const StyledTitle = styled(Title)`
 // Notes
 // ----------------------------------------------------------------------------
 
-function Notes() {
+type NotesProps = {
+  repos: Repos,
+}
+
+function Notes({ repos }: NotesProps) {
+  useMemo(() => octokit.loadContents(repos), [repos])
 
   return (
     <>

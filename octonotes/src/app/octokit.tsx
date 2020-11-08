@@ -1,6 +1,9 @@
-import { Repo } from "./repo";
+import { Repo, Repos } from "./repo";
 
 import { Octokit } from '@octokit/rest';
+
+import { Note } from "./types"
+
 
 async function expect<T>(promise: Promise<T>): Promise<[T?, Error?]> {
   return promise
@@ -27,6 +30,51 @@ export async function verifyRepo(repo: Repo) {
     console.log(error);
     return false;
   }
+}
+
+type Contents = {
+  notes: Note[]
+}
+
+async function recursiveLoad(octokit: Octokit, repo: Repo, path: string, contents: Contents) {
+  console.log("recursiveLoad", path)
+
+  let [content, error] = await expect(octokit.repos.getContent({
+    owner: repo.userName,
+    repo: repo.repoName,
+    path: path,
+  }))
+
+  //console.log(content)
+  //console.log(error)
+
+  if (content != null) {
+    for (let entry of content.data as any) {
+      console.log(entry)
+      if (entry.type === "dir") {
+        recursiveLoad(octokit, repo, `${path}/${entry.name}`, contents)
+      }
+    }
+  }
+}
+
+export async function loadContents(repos: Repos): Promise<Contents> {
+  console.log("Loading contents")
+  console.log(repos)
+
+  let contents = {
+    notes: []
+  }
+
+  for (let repo of repos) {
+    const octokit = new Octokit({
+      auth: repo.token,
+    });
+
+    await recursiveLoad(octokit, repo, ".", contents);
+  }
+
+  return contents;
 }
 
 /*

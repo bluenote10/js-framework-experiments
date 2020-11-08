@@ -38,6 +38,20 @@ function App() {
     repo_utils.setStoredRepos(repos);
   }, [repos]);
 
+  // Derived state: Active repos
+  const [activeRepos, setActiveRepos] = useState([] as repo_utils.Repo[])
+
+  useEffect(() => {
+    let newActiveRepos = [];
+    for (let repo of repos) {
+      if (repo.enabled && repo.verified) {
+        newActiveRepos.push(repo);
+      }
+    }
+    setActiveRepos(newActiveRepos);
+  }, [repos])
+
+
   return (
     <Layout>
       {/* Theoretically the menu should be wrapped in <Header> but I prefer the smaller sized menu */}
@@ -63,7 +77,7 @@ function App() {
           <Col md={18} xl={12}>
             {(
               page === Page.Main
-              ? <Notes/>
+              ? <Notes repos={activeRepos}/>
               : <Settings repos={repos} setRepos={setRepos}/>
             )}
           </Col>
