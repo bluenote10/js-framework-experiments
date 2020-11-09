@@ -1,5 +1,5 @@
 import React from 'react';
-import { useMemo } from "react";
+import { useEffect } from "react";
 import { Typography } from 'antd';
 
 import styled from '@emotion/styled'
@@ -22,7 +22,13 @@ type NotesProps = {
 }
 
 function Notes({ repos }: NotesProps) {
-  useMemo(() => octokit.loadContents(repos), [repos])
+
+  useEffect(() => {
+    async function loadContents() {
+      let contents = await octokit.loadContents(repos)
+    }
+    loadContents();
+  }, [repos])
 
   return (
     <>
