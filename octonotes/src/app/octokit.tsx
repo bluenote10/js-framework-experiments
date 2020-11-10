@@ -2,95 +2,193 @@
 import * as localforage from "localforage"
 import { Octokit } from '@octokit/rest';
 
+import * as neverthrow from 'neverthrow'
+import { ok, err, okAsync, errAsync, Result, ResultAsync } from 'neverthrow'
 
 import { Repo, Repos } from "./repo";
 import { Note } from "./types"
 
 
+const NOTEMARKS_FOLDER = ".notemarks"
+
+
+enum FileKind {
+  NoteMarkdown = "NoteMarkdown",
+  Link = "Link",
+  Document = "Document",
+}
+
+function getFileKind(path: string): FileKind {
+  let extension = path.split('.').pop()?.toLowerCase();
+  if (extension === "md") {
+    return FileKind.NoteMarkdown;
+  } else if (extension === "desktop") {
+    return FileKind.Link;
+  } else {
+    return FileKind.Document;
+  }
+}
+
+
+//type Result<T> = neverthrow.Result<T, Error>
+//type ResultAsync<T> = Promise<Result<T>>
+//type ResultAsync<T> = neverthrow.ResultAsync<T, Error>
+
+
+/*
 async function expect<T>(promise: Promise<T>): Promise<[T?, Error?]> {
   return promise
     .then(data => [data, undefined] as [T, undefined])
     .catch(error => Promise.resolve([undefined, error] as [undefined, Error]));
 }
+*/
+
+function expect<T>(promise: Promise<T>): neverthrow.ResultAsync<T, Error> {
+  return neverthrow.ResultAsync.fromPromise(promise, (e) => e as Error);
+}
+
 
 export async function verifyRepo(repo: Repo) {
   const octokit = new Octokit({
     auth: repo.token,
   });
 
-  let [content, error] = await expect(octokit.repos.getContent({
+  let content = await expect(octokit.repos.getContent({
     owner: repo.userName,
     repo: repo.repoName,
     path: ".",
   }))
 
-  if (content != null) {
+  if (content.isOk()) {
     console.log("Verification succeeded.")
     return true;
   } else {
     console.log("Verification failed:")
-    console.log(error);
+    console.log(content.error);
     return false;
   }
 }
 
-type Contents = {
-  notes: Note[]
+/*
+async function foo(): Promise<number> {
+  return 42;
 }
 
-async function cachedFetch(octokit: Octokit, repo: Repo, path: string, sha: string): Promise<string | undefined> {
+async function test(): Promise<Result<string, Error>> {
+  let result = await ResultAsync.fromPromise(foo(), () => new Error("failed"))
+  if (result.isOk()) {
+    if (result.value > 0) {
+      return okAsync("positive")
+    } else {
+      return okAsync("negative")
+    }
+  } else {
+    return errAsync(new Error("failed"))
+  }
+}
+*/
+
+async function cachedFetch(octokit: Octokit, repo: Repo, path: string, sha: string): Promise<Result<string, Error>> {
   let key = `${path}_${sha}`
   let cached = await localforage.getItem(key) as string | undefined
 
   if (cached != null) {
-    return cached;
+    console.log(`${key} found in cached`)
+    return ok(cached);
   } else {
-    let [content, error] = await expect(octokit.repos.getContent({
+    let result = await expect(octokit.repos.getContent({
       owner: repo.userName,
       repo: repo.repoName,
       path: path,
-    })) as [any, Error]
+    }))
 
-    if (error != null) {
-      console.log(error)
-      return undefined;
-    }
-
-    if (content != null) {
+    if (result.isOk()) {
+      console.log(`${key} fetched successfully`)
+      let content = result.value;
       //console.log(content)
       console.assert(content.data.sha === sha, "SHA mismatch")
       console.assert(content.data.encoding === "base64", "Encoding mismatch")
       let plainContent = atob(content.data.content)
-      console.log(plainContent)
+      //console.log(plainContent)
       await localforage.setItem(key, plainContent)
-      return plainContent;
+      return ok(plainContent);
     } else {
-      return undefined;
+      console.log(`${key} failed to fetch`, result.error)
+      return err(result.error);
     }
-
   }
-
 }
 
-async function recursiveLoad(octokit: Octokit, repo: Repo, path: string, contents: Contents) {
+async function cachedFetchFile(octokit: Octokit, repo: Repo, path: string, sha: string): Promise<Result<File, FileError>> {
+  let fileKind = getFileKind(path)
+  if (fileKind === FileKind.Document) {
+    return ok({
+      kind: fileKind,
+      path: path,
+      content: undefined,
+    })
+  } else {
+    let result = await cachedFetch(octokit, repo, path, sha);
+    if (result.isOk()) {
+      return ok({
+        kind: fileKind,
+        path: path,
+        content: result.value,
+      })
+    } else {
+      return err({
+        kind: fileKind,
+        path: path,
+        error: result.error,
+      })
+    }
+  }
+}
+
+
+type File = {
+  kind: FileKind,
+  //filename: string,
+  path: string,
+  content: string | undefined,
+}
+
+type FileError = {
+  kind: FileKind,
+  //filename: string,
+  path: string,
+  error: Error,
+}
+
+
+type FilePromises = Array<Promise<Result<File, FileError>>>
+
+type Contents = {
+  notes: Note[],
+}
+
+async function recursiveLoad(octokit: Octokit, repo: Repo, path: string, promises: FilePromises) {
   console.log("recursiveLoad", path)
 
-  let [content, error] = await expect(octokit.repos.getContent({
+  let result = await expect(octokit.repos.getContent({
     owner: repo.userName,
     repo: repo.repoName,
     path: path,
   }))
 
-  console.log(content)
-  //console.log(error)
+  if (result.isOk()) {
+    let content = result.value
+    // console.log(content)
 
-  if (content != null) {
     for (let entry of content.data as any) {
-      console.log(entry.path)
-      if (entry.type === "dir") {
-        await recursiveLoad(octokit, repo, entry.path, contents)
+      // console.log(entry.path)
+      if (entry.type === "dir" &&  entry.name !== NOTEMARKS_FOLDER) {
+        // It is important to await the recursive load, otherwise the outer logic does not
+        // even know what / how many promises there will be scheduled.
+        await recursiveLoad(octokit, repo, entry.path, promises)
       } else if (entry.type === "file") {
-        let content = await cachedFetch(octokit, repo, entry.path, entry.sha)
+        promises.push(cachedFetchFile(octokit, repo, entry.path, entry.sha))
+        /*
         if (content != null) {
           contents.notes.push({
             repoId: repo.id,
@@ -102,30 +200,59 @@ async function recursiveLoad(octokit: Octokit, repo: Repo, path: string, content
             content: content,
           })
         }
+        */
       }
     }
-    debugger;
   }
 }
 
-export async function loadContents(repos: Repos): Promise<Contents> {
+export async function loadContents(repos: Repos): Promise<Result<File, FileError>[]> {
   console.log("Loading contents")
   console.log(repos)
 
-  let contents = {
-    notes: []
-  }
+  let filePromises = [] as FilePromises
 
   for (let repo of repos) {
     const octokit = new Octokit({
       auth: repo.token,
     });
 
-    await recursiveLoad(octokit, repo, ".", contents);
+    // It is important to await the recursive load, otherwise the outer logic does not
+    // even know what / how many promises there will be scheduled.
+    await recursiveLoad(octokit, repo, ".", filePromises);
+  }
+  console.log("filePromises:", filePromises)
+  console.log("filePromises.length:", filePromises.length)
+  console.log("filePromises:", filePromises)
+  console.log("filePromises.length:", filePromises.length)
+  console.log("filePromises:", filePromises)
+  console.log("filePromises.length:", filePromises.length)
+
+  for (let filePromise of filePromises) {
+    console.log(filePromise)
   }
 
-  return contents;
+  console.log("num files to load:", filePromises.length);
+  /*
+  let files: Result<File, FileError>[] = (await Promise.allSettled(filePromises)).map(settleStatus => {
+    if (settleStatus.status === "fulfilled") {
+      return settleStatus.value;
+    } else {
+      return err(settleStatus.reason);
+    }
+  });
+  */
+  let files = await Promise.all(filePromises);
+  console.log("num files loaded:", files.length);
+
+  for (let file of files) {
+    console.log(file)
+  }
+
+  //debugger;
+  return files;
 }
+
 
 /*
 const auth = process.env.REACT_APP_AUTH;
