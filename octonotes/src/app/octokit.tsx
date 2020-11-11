@@ -88,6 +88,24 @@ async function test(): Promise<Result<string, Error>> {
 }
 */
 
+/*
+async function foo(): Promise<number> {
+  return 42;
+}
+
+async function combine(): Promise<Result<number, Error>> {
+  let promiseA = foo();
+  let promiseB = foo();
+  let resultA = await ResultAsync.fromPromise(promiseA, () => new Error("failed"))
+  let resultB = await ResultAsync.fromPromise(promiseB, () => new Error("failed"))
+  return (
+    resultA.isOk() && resultB.isOk() ?
+    okAsync(resultA.value + resultB.value) :
+    errAsync(new Error("failed"))
+  )
+}
+*/
+
 async function cachedFetch(octokit: Octokit, repo: Repo, path: string, sha: string): Promise<Result<string, Error>> {
   let key = `${path}_${sha}`
   let cached = await localforage.getItem(key) as string | undefined
@@ -119,6 +137,7 @@ async function cachedFetch(octokit: Octokit, repo: Repo, path: string, sha: stri
   }
 }
 
+/*
 async function cachedFetchFile(octokit: Octokit, repo: Repo, path: string, sha: string): Promise<Result<File, FileError>> {
   let fileKind = getFileKind(path)
   if (fileKind === FileKind.Document) {
@@ -160,12 +179,7 @@ type FileError = {
   error: Error,
 }
 
-
 type FilePromises = Array<Promise<Result<File, FileError>>>
-
-type Contents = {
-  notes: Note[],
-}
 
 async function recursiveLoad(octokit: Octokit, repo: Repo, path: string, promises: FilePromises) {
   console.log("recursiveLoad", path)
@@ -188,7 +202,7 @@ async function recursiveLoad(octokit: Octokit, repo: Repo, path: string, promise
         await recursiveLoad(octokit, repo, entry.path, promises)
       } else if (entry.type === "file") {
         promises.push(cachedFetchFile(octokit, repo, entry.path, entry.sha))
-        /*
+        / *
         if (content != null) {
           contents.notes.push({
             repoId: repo.id,
@@ -200,17 +214,52 @@ async function recursiveLoad(octokit: Octokit, repo: Repo, path: string, promise
             content: content,
           })
         }
-        */
+        * /
+      }
+    }
+  }
+}
+*/
+
+type File = {
+  path: string,
+  sha: string,
+}
+
+type Contents = {
+  notes: Note[],
+}
+
+async function recursiveListFiles(octokit: Octokit, repo: Repo, path: string, files: File[]) {
+  console.log("recursiveListFiles", path)
+
+  let result = await expect(octokit.repos.getContent({
+    owner: repo.userName,
+    repo: repo.repoName,
+    path: path,
+  }))
+
+  if (result.isOk()) {
+    let content = result.value
+    // console.log(content)
+
+    for (let entry of content.data as any) {
+      if (entry.type === "dir" &&  entry.name !== NOTEMARKS_FOLDER) {
+        // It is important to await the recursive load, otherwise the outer logic does not
+        // even know what / how many promises there will be scheduled.
+        await recursiveListFiles(octokit, repo, entry.path, files)
+      } else if (entry.type === "file") {
+        files.push({
+          path: entry.path,
+          sha: entry.sha
+        })
       }
     }
   }
 }
 
-export async function loadContents(repos: Repos): Promise<Result<File, FileError>[]> {
-  console.log("Loading contents")
-  console.log(repos)
-
-  let filePromises = [] as FilePromises
+export async function loadContents(repos: Repos): Promise<Result<File, Error>[]> {
+  console.log(`Loading contents from ${repos.length} repos`)
 
   for (let repo of repos) {
     const octokit = new Octokit({
@@ -219,20 +268,21 @@ export async function loadContents(repos: Repos): Promise<Result<File, FileError
 
     // It is important to await the recursive load, otherwise the outer logic does not
     // even know what / how many promises there will be scheduled.
-    await recursiveLoad(octokit, repo, ".", filePromises);
-  }
-  console.log("filePromises:", filePromises)
-  console.log("filePromises.length:", filePromises.length)
-  console.log("filePromises:", filePromises)
-  console.log("filePromises.length:", filePromises.length)
-  console.log("filePromises:", filePromises)
-  console.log("filePromises.length:", filePromises.length)
 
-  for (let filePromise of filePromises) {
-    console.log(filePromise)
+    let files = [] as File[]
+    await recursiveListFiles(octokit, repo, ".", files);
+
+    let metaFiles = [] as File[]
+    await recursiveListFiles(octokit, repo, NOTEMARKS_FOLDER, files);
+
+    for (let file of files) {
+      console.log(file)
+    }
+    for (let metaFile of metaFiles) {
+      console.log(metaFile)
+    }
   }
 
-  console.log("num files to load:", filePromises.length);
   /*
   let files: Result<File, FileError>[] = (await Promise.allSettled(filePromises)).map(settleStatus => {
     if (settleStatus.status === "fulfilled") {
@@ -242,15 +292,18 @@ export async function loadContents(repos: Repos): Promise<Result<File, FileError
     }
   });
   */
+
+  /*
   let files = await Promise.all(filePromises);
   console.log("num files loaded:", files.length);
 
   for (let file of files) {
     console.log(file)
   }
+  */
 
   //debugger;
-  return files;
+  return [];
 }
 
 
