@@ -29,6 +29,9 @@ function getFileKind(path: string): FileKind {
   }
 }
 
+function getAssociatedMetaPath(path: string): string {
+  return `${NOTEMARKS_FOLDER}/${path}.yaml`
+}
 
 //type Result<T> = neverthrow.Result<T, Error>
 //type ResultAsync<T> = Promise<Result<T>>
@@ -273,14 +276,18 @@ export async function loadContents(repos: Repos): Promise<Result<File, Error>[]>
     await recursiveListFiles(octokit, repo, ".", files);
 
     let metaFiles = [] as File[]
-    await recursiveListFiles(octokit, repo, NOTEMARKS_FOLDER, files);
+    await recursiveListFiles(octokit, repo, NOTEMARKS_FOLDER, metaFiles);
 
+    /*
     for (let file of files) {
       console.log(file)
     }
     for (let metaFile of metaFiles) {
       console.log(metaFile)
     }
+    */
+
+    combineFilesAndMeta(files, metaFiles)
   }
 
   /*
@@ -306,6 +313,47 @@ export async function loadContents(repos: Repos): Promise<Result<File, Error>[]>
   return [];
 }
 
+type FileAndMeta = {
+  file: File,
+  meta: File,
+}
+
+function combineFilesAndMeta(files: File[], metaFiles: File[]) {
+
+  // Build meta lookup map
+  let metaFilesMap: {[key: string]: File} = {}
+  for (let metaFile of metaFiles) {
+    metaFilesMap[metaFile.path] = metaFile;
+  }
+  console.log(metaFilesMap)
+
+  let filesAndMeta = [] as FileAndMeta[]
+  let filesWithMissingMeta = [] as File[]
+
+  // Iterate over files and find associated meta
+  for (let file of files) {
+    let metaPath = getAssociatedMetaPath(file.path)
+    if (metaPath in metaFilesMap) {
+      console.log(metaPath, "found")
+      filesAndMeta.push({
+        file: file,
+        meta: metaFilesMap[metaPath],
+      })
+    } else {
+      console.log(metaPath, "is missing")
+      filesWithMissingMeta.push(file)
+    }
+  }
+
+  console.log("filesAndMeta", filesAndMeta)
+  console.log("filesWithMissingMeta", filesWithMissingMeta)
+
+  // TODO: Should we fix filesWithMissingMeta here? Or later?
+
+  for (let { file, meta } of filesAndMeta) {
+    // fetch contents
+  }
+}
 
 /*
 const auth = process.env.REACT_APP_AUTH;
