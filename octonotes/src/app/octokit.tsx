@@ -5,20 +5,25 @@ import { Octokit } from '@octokit/rest';
 import * as neverthrow from 'neverthrow'
 import { ok, err, okAsync, errAsync, Result, ResultAsync } from 'neverthrow'
 
+import * as yaml from "js-yaml"
+
 import { Repo, Repos } from "./repo";
 import { Note } from "./types"
 
 
 const NOTEMARKS_FOLDER = ".notemarks"
 
+// ----------------------------------------------------------------------------
+// File name / path handling utils
+// ----------------------------------------------------------------------------
 
-enum FileKind {
+export enum FileKind {
   NoteMarkdown = "NoteMarkdown",
   Link = "Link",
   Document = "Document",
 }
 
-function getFileKind(path: string): FileKind {
+export function getFileKind(path: string): FileKind {
   let extension = path.split('.').pop()?.toLowerCase();
   if (extension === "md") {
     return FileKind.NoteMarkdown;
@@ -29,8 +34,40 @@ function getFileKind(path: string): FileKind {
   }
 }
 
-function getAssociatedMetaPath(path: string): string {
+export function getAssociatedMetaPath(path: string): string {
   return `${NOTEMARKS_FOLDER}/${path}.yaml`
+}
+
+export function splitLocationAndFilename(path: string): [string, string] {
+  let idxLastSlash = path.lastIndexOf('/')
+  if (idxLastSlash === -1) {
+    return ["", path]
+  } else {
+    return [
+      path.substring(0, idxLastSlash),
+      path.substring(idxLastSlash + 1),
+    ]
+  }
+}
+
+export function filenameToTitle(filename: string) {
+  // TODO: Unescaping of special chars has to go here...
+  let idxLastDot = filename.lastIndexOf('.')
+  if (idxLastDot === -1) {
+    return filename;
+  } else {
+    return filename.substring(0, idxLastDot);
+  }
+}
+
+export function titleToFilename(title: string, extension: string) {
+  // TODO: Escaping of special chars has to go here...
+  let titleEscaped = title
+  if (extension.length > 0) {
+    return `${titleEscaped}.${extension}`;
+  } else {
+    return titleEscaped;
+  }
 }
 
 //type Result<T> = neverthrow.Result<T, Error>
@@ -227,10 +264,17 @@ async function recursiveLoad(octokit: Octokit, repo: Repo, path: string, promise
 type File = {
   path: string,
   sha: string,
+  rawUrl: string,
 }
 
 type Contents = {
   notes: Note[],
+}
+
+type OctokitContext = {
+  octokit: Octokit,
+  owner: string,
+  repo: string,
 }
 
 async function recursiveListFiles(octokit: Octokit, repo: Repo, path: string, files: File[]) {
@@ -245,6 +289,8 @@ async function recursiveListFiles(octokit: Octokit, repo: Repo, path: string, fi
   if (result.isOk()) {
     let content = result.value
     // console.log(content)
+    // Reference for fields:
+    // https://developer.github.com/v3/repos/contents/#get-repository-content
 
     for (let entry of content.data as any) {
       if (entry.type === "dir" &&  entry.name !== NOTEMARKS_FOLDER) {
@@ -254,7 +300,8 @@ async function recursiveListFiles(octokit: Octokit, repo: Repo, path: string, fi
       } else if (entry.type === "file") {
         files.push({
           path: entry.path,
-          sha: entry.sha
+          sha: entry.sha,
+          rawUrl: entry.download_url,
         })
       }
     }
@@ -287,7 +334,10 @@ export async function loadContents(repos: Repos): Promise<Result<File, Error>[]>
     }
     */
 
-    combineFilesAndMeta(files, metaFiles)
+    let entryPromises = combineFilesAndMeta(octokit, repo, files, metaFiles)
+    let entries = await Promise.all(entryPromises)
+    console.log(entries)
+
   }
 
   /*
@@ -318,7 +368,7 @@ type FileAndMeta = {
   meta: File,
 }
 
-function combineFilesAndMeta(files: File[], metaFiles: File[]) {
+function combineFilesAndMeta(octokit: Octokit, repo: Repo, files: File[], metaFiles: File[]): Array<Promise<Result<Entry, Error>>> {
 
   // Build meta lookup map
   let metaFilesMap: {[key: string]: File} = {}
@@ -349,9 +399,68 @@ function combineFilesAndMeta(files: File[], metaFiles: File[]) {
   console.log("filesWithMissingMeta", filesWithMissingMeta)
 
   // TODO: Should we fix filesWithMissingMeta here? Or later?
+  // TODO: Return "staged changes" data structure along with entries?
 
+  let entryPromises = []
   for (let { file, meta } of filesAndMeta) {
     // fetch contents
+    entryPromises.push(loadEntry(octokit, repo, file, meta))
+  }
+
+  return entryPromises;
+}
+
+type Entry = {
+  repoId: string,
+  location: string,
+  title: string,
+  labels: string[],
+  timeCreated: Date,
+  timeUpdated: Date,
+  content: string | undefined,
+  rawUrl: string,
+}
+
+type MetaData = {
+  labels: string[],
+  timeCreated: Date,
+  timeUpdated: Date,
+}
+
+async function loadEntry(octokit: Octokit, repo: Repo, file: File, meta: File): Promise<Result<Entry, Error>> {
+  let fileKind = getFileKind(file.path)
+
+  let metaContent = await cachedFetch(octokit, repo, meta.path, meta.sha);
+
+  let fileContent: Result<string, Error> | undefined = undefined
+  if (fileKind !== FileKind.Document) {
+    fileContent = await cachedFetch(octokit, repo, file.path, file.sha);
+  }
+
+  if (metaContent.isOk() && (fileContent == null || fileContent.isOk())) {
+
+    let [location, filename] = splitLocationAndFilename(file.path)
+    let title = filenameToTitle(filename)
+
+    // TODO: split into explicit parser with Result<MetaData>
+    let metaData = yaml.safeLoad(metaContent.value) as MetaData
+
+    if (metaData == null) {
+      return err(new Error(`Failed to parse meta data from: ${metaContent}`))
+    } else {
+      return ok({
+        repoId: repo.id,
+        location: location,
+        title: title,
+        labels: metaData.labels as string[],
+        timeCreated: metaData.timeCreated as Date,
+        timeUpdated: metaData.timeUpdated as Date,
+        content: fileContent?.value,
+        rawUrl: file.rawUrl,
+      })
+    }
+  } else {
+    return err(new Error(`Failed to fetch contents for ${meta.path} or ${file.path}`))
   }
 }
 

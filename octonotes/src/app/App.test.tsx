@@ -1,7 +1,18 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
+
 import App from './App';
 
-test('renders learn react link', () => {
+// https://stackoverflow.com/a/53449595/1804173
+// import './mocks.mock';
+window.matchMedia = window.matchMedia || function() {
+  return {
+    matches: false,
+    addListener: function() {},
+    removeListener: function() {}
+  };
+};
+
+test('basic app rendering', () => {
   render(<App />);
 });
