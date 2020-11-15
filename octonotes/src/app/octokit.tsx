@@ -151,15 +151,7 @@ type File = {
   rawUrl: string,
 }
 
-/*
-type OctokitContext = {
-  octokit: Octokit,
-  owner: string,
-  repo: string,
-}
-*/
-
-async function recursiveListFiles(octokit: Octokit, repo: Repo, path: string, files: File[]) {
+async function listFilesRecursive(octokit: Octokit, repo: Repo, path: string, files: File[]) {
   console.log("recursiveListFiles", path)
 
   let result = await expect(octokit.repos.getContent({
@@ -178,7 +170,7 @@ async function recursiveListFiles(octokit: Octokit, repo: Repo, path: string, fi
       if (entry.type === "dir" &&  entry.name !== NOTEMARKS_FOLDER) {
         // It is important to await the recursive load, otherwise the outer logic does not
         // even know what / how many promises there will be scheduled.
-        await recursiveListFiles(octokit, repo, entry.path, files)
+        await listFilesRecursive(octokit, repo, entry.path, files)
       } else if (entry.type === "file") {
         files.push({
           path: entry.path,
@@ -190,115 +182,17 @@ async function recursiveListFiles(octokit: Octokit, repo: Repo, path: string, fi
   }
 }
 
+async function listFiles(octokit: Octokit, repo: Repo, path: string): Promise<File[]> {
+    // It is important to await the recursive load, otherwise the 'out' variables will
+    // just stay empty...
+    let files = [] as File[]
+    await listFilesRecursive(octokit, repo, path, files);
+    return files;
+}
+
 // ----------------------------------------------------------------------------
 // High level entry loading
 // ----------------------------------------------------------------------------
-
-export async function loadEntries(repos: Repos): Promise<Result<File, Error>[]> {
-  console.log(`Loading contents from ${repos.length} repos`)
-
-  for (let repo of repos) {
-    const octokit = new Octokit({
-      auth: repo.token,
-    });
-
-    // It is important to await the recursive load, otherwise the outer logic does not
-    // even know what / how many promises there will be scheduled.
-
-    let files = [] as File[]
-    await recursiveListFiles(octokit, repo, ".", files);
-
-    let metaFiles = [] as File[]
-    await recursiveListFiles(octokit, repo, NOTEMARKS_FOLDER, metaFiles);
-
-    /*
-    for (let file of files) {
-      console.log(file)
-    }
-    for (let metaFile of metaFiles) {
-      console.log(metaFile)
-    }
-    */
-
-    let entryPromises = combineFilesAndMeta(octokit, repo, files, metaFiles)
-    let entries = await Promise.all(entryPromises)
-    console.log(entries)
-
-  }
-
-  /*
-  let files: Result<File, FileError>[] = (await Promise.allSettled(filePromises)).map(settleStatus => {
-    if (settleStatus.status === "fulfilled") {
-      return settleStatus.value;
-    } else {
-      return err(settleStatus.reason);
-    }
-  });
-  */
-
-  /*
-  let files = await Promise.all(filePromises);
-  console.log("num files loaded:", files.length);
-
-  for (let file of files) {
-    console.log(file)
-  }
-  */
-
-  //debugger;
-  return [];
-}
-
-
-// better name: loadEntriesForRepoFromFilesList
-function combineFilesAndMeta(octokit: Octokit, repo: Repo, files: File[], metaFiles: File[]): Array<Promise<Result<Entry, Error>>> {
-
-  // Build meta lookup map
-  let metaFilesMap: {[key: string]: File} = {}
-  for (let metaFile of metaFiles) {
-    metaFilesMap[metaFile.path] = metaFile;
-  }
-  console.log(metaFilesMap)
-
-  type FileAndMeta = {
-    file: File,
-    meta: File,
-  }
-  let filesAndMeta = [] as FileAndMeta[]
-  let filesWithMissingMeta = [] as File[]
-
-  // Iterate over files and find associated meta
-  for (let file of files) {
-    let metaPath = getAssociatedMetaPath(file.path)
-    if (metaPath in metaFilesMap) {
-      console.log(metaPath, "found")
-      filesAndMeta.push({
-        file: file,
-        meta: metaFilesMap[metaPath],
-      })
-    } else {
-      console.log(metaPath, "is missing")
-      filesWithMissingMeta.push(file)
-    }
-  }
-
-  console.log("filesAndMeta", filesAndMeta)
-  console.log("filesWithMissingMeta", filesWithMissingMeta)
-
-  // TODO: Should we fix filesWithMissingMeta here? Or later?
-  // TODO: Return "staged changes" data structure along with entries?
-  // TODO: Make sure the cases "missing meta data" and "failed to parse meta data" are handled
-  // identically without much code duplication. Currently there is a check in loadEntry for that.
-
-  let entryPromises = []
-  for (let { file, meta } of filesAndMeta) {
-    // fetch contents
-    entryPromises.push(loadEntry(octokit, repo, file, meta))
-  }
-
-  return entryPromises;
-}
-
 
 export type Entry = {
   // General fields
@@ -316,56 +210,181 @@ export type Entry = {
   content: string | undefined,
 }
 
+// Note: Currently MetaData is only an internal type used during loading, and its
+// fields get copied into the Entry type. Perhaps keeping it as internal type is
+// beneficial, because it hides which data is actually coming from the meta files.
+// However, we might as well embed it directly if that turns out to be more convenient.
 type MetaData = {
   labels: string[],
   timeCreated: Date,
   timeUpdated: Date,
 }
 
+type StagedChange = {}
 
-async function loadEntry(octokit: Octokit, repo: Repo, file: File, meta: File): Promise<Result<Entry, Error>> {
-  let entryKind = getEntryKind(file.path)
+// TODO: Return value must become tuple of entries, load failures, and staged changes?
+export async function loadEntries(repos: Repos): Promise<Entry[]> {
+  console.log(`Loading contents from ${repos.length} repos`)
 
-  let metaContent = await cachedFetch(octokit, repo, meta.path, meta.sha);
+  let allEntries = [] as Entry[]
+  let allErrors = [] as Error[]
+  let stagedChanges = [] as StagedChange[]
 
-  let fileContent: Result<string, Error> | undefined = undefined
-  if (entryKind !== EntryKind.Document) {
-    fileContent = await cachedFetch(octokit, repo, file.path, file.sha);
+  for (let repo of repos) {
+    const octokit = new Octokit({
+      auth: repo.token,
+    });
+
+    let files = await listFiles(octokit, repo, ".");
+    let metaFiles = await listFiles(octokit, repo, NOTEMARKS_FOLDER);
+
+    let entriesPromises = loadEntriesForRepoFromFilesList(octokit, repo, files, metaFiles, stagedChanges)
+    let entries = await Promise.all(entriesPromises)
+    /*
+    // In theory we should use Promise.allSettled to account for failures of the promises,
+    // but since we use ResultAsync that should be practically impossible, right?
+    let entries: Result<Entry, Error>[] = (await Promise.allSettled(entriesPromises)).map(settleStatus => {
+      if (settleStatus.status === "fulfilled") {
+        return settleStatus.value;
+      } else {
+        return err(settleStatus.reason);
+      }
+    });
+    */
+    // console.log(entries)
+
+    for (let entry of entries) {
+      if (entry.isOk()) {
+        allEntries.push(entry.value);
+      } else {
+        allErrors.push(entry.error);
+      }
+    }
   }
 
-  if (metaContent.isOk() && (fileContent == null || fileContent.isOk())) {
+  console.log(allEntries)
+  console.log(allErrors)
+
+  return allEntries;
+}
+
+
+function loadEntriesForRepoFromFilesList(
+  octokit: Octokit,
+  repo: Repo,
+  files: File[],
+  metaFiles: File[],
+  stagedChanges: StagedChange[],
+): Array<Promise<Result<Entry, Error>>> {
+
+  // Build meta lookup map
+  let metaFilesMap: {[key: string]: File} = {}
+  for (let metaFile of metaFiles) {
+    metaFilesMap[metaFile.path] = metaFile;
+  }
+
+  type FileAndMeta = {
+    file: File,
+    meta?: File,
+  }
+  let filesAndMeta = [] as FileAndMeta[]
+
+  // Iterate over files and find associated meta
+  for (let file of files) {
+    let metaPath = getAssociatedMetaPath(file.path)
+    filesAndMeta.push({
+      file: file,
+      meta: metaFilesMap[metaPath],
+    })
+  }
+
+  // TODO: Should we fix filesWithMissingMeta here? Or later?
+  // TODO: Return "staged changes" data structure along with entries?
+  // TODO: Make sure the cases "missing meta data" and "failed to parse meta data" are handled
+  // identically without much code duplication. Currently there is a check in loadEntry for that.
+
+  let entryPromises = []
+  for (let { file, meta } of filesAndMeta) {
+    entryPromises.push(loadEntry(octokit, repo, file, meta, stagedChanges))
+  }
+
+  return entryPromises;
+}
+
+
+async function loadEntry(
+  octokit: Octokit,
+  repo: Repo,
+  file: File,
+  meta: File | undefined,
+  stagedChanges: StagedChange[],
+): Promise<Result<Entry, Error>> {
+
+  // Determine entry kind
+  let entryKind = getEntryKind(file.path)
+
+  // Optionally fetch entry content
+  let entryContent: Result<string, Error> | undefined = undefined
+  if (entryKind !== EntryKind.Document) {
+    entryContent = await cachedFetch(octokit, repo, file.path, file.sha);
+  }
+
+  if ((entryContent == null || entryContent.isOk())) {
+
+    // For meta data there are three cases:
+    // - No meta file exists => okay, create/stage new
+    // - Meta file exists, but fetch fails => create/stage not good, report as error
+    // - Meta file exists, fetch is okay, but parse fails => probably better report as error?
+    let metaData: MetaData
+    if (meta == null) {
+      metaData = createNewMetaData()
+      // TODO: Add to staged changes here.
+    } else {
+      let metaContent = await cachedFetch(octokit, repo, meta.path, meta.sha);
+      if (metaContent.isErr()) {
+        return err(new Error(`Failed to fetch content of meta data ${meta.path}`))
+      } else {
+        let metaDataResult = parseMetaData(metaContent.value)
+        if (metaDataResult.isErr()) {
+          return err(new Error(`Could not parse meta data file ${meta.path}`))
+        } else {
+          metaData = metaDataResult.value
+        }
+      }
+    }
 
     let [location, filename] = splitLocationAndFilename(file.path)
     let title = filenameToTitle(filename)
 
-    let metaDataResult = parseMetaData(metaContent.value)
-
-    if (metaDataResult.isErr()) {
-      // TODO: Actually when meta data parsing fails we should as well create a new empty meta data
-      // (similar to the case when the file doesn't exist in the first place), and stage this change.
-      return err(metaDataResult.error)
-    } else {
-      let metaData = metaDataResult.value;
-      return ok({
-        repoId: repo.id,
-        rawUrl: file.rawUrl,
-        location: location,
-        title: title,
-        entryKind: entryKind,
-        labels: metaData.labels as string[],
-        timeCreated: metaData.timeCreated as Date,
-        timeUpdated: metaData.timeUpdated as Date,
-        content: fileContent?.value,
-      })
-    }
+    return ok({
+      repoId: repo.id,
+      rawUrl: file.rawUrl,
+      location: location,
+      title: title,
+      entryKind: entryKind,
+      labels: metaData.labels as string[],
+      timeCreated: metaData.timeCreated as Date,
+      timeUpdated: metaData.timeUpdated as Date,
+      content: entryContent?.value,
+    })
   } else {
-    return err(new Error(`Failed to fetch contents for ${meta.path} or ${file.path}`))
+    return err(new Error(`Failed to fetch content of ${file.path}`))
   }
 }
 
 // ----------------------------------------------------------------------------
-// Parsing utils
+// Meta data utils
 // ----------------------------------------------------------------------------
+
+function createNewMetaData(): MetaData {
+  let date = new Date();
+  date.setMilliseconds(0);
+  return {
+    labels: [],
+    timeCreated: date,
+    timeUpdated: date,
+  }
+}
 
 function parseMetaData(content: string): Result<MetaData, Error> {
   let metaData = yaml.safeLoad(content) as MetaData

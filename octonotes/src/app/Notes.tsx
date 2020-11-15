@@ -1,11 +1,11 @@
 import React from 'react';
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Typography } from 'antd';
 
 import styled from '@emotion/styled'
 
 import { Repos } from "./repo";
-import * as octokit from "./octokit";
+import { Entry, loadEntries} from "./octokit";
 
 const { Title } = Typography;
 
@@ -23,9 +23,12 @@ type NotesProps = {
 
 function Notes({ repos }: NotesProps) {
 
+  let [entries, setEntries] = useState([] as Entry[])
+
   useEffect(() => {
     async function loadContents() {
-      let entries = await octokit.loadEntries(repos)
+      let newEntries = await loadEntries(repos)
+      setEntries(newEntries)
     }
     loadContents();
   }, [repos])
@@ -33,6 +36,11 @@ function Notes({ repos }: NotesProps) {
   return (
     <>
       <StyledTitle level={4}>Notes</StyledTitle>
+      {entries.map(entry =>
+        <div key={entry.title}>
+          {entry.title}
+        </div>
+      )}
     </>
   );
 }
