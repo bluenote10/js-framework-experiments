@@ -19,8 +19,7 @@ export function dateToString(d: Date): string {
     leftPadTwo(d.getDate()) + "T" +
     leftPadTwo(d.getHours()) + ":" +
     leftPadTwo(d.getMinutes()) + ":" +
-    leftPadTwo(d.getSeconds()) + "." +
-    leftPad(d.getMilliseconds(), 3)
+    leftPadTwo(d.getSeconds())
   )
 }
 
@@ -45,7 +44,9 @@ export function stringToDate(s: string): Date | undefined {
   }
 
   let splitTimeMillis = timeWithMillis.split(".")
-  if (splitTimeMillis.length !== 2) {
+  if (splitTimeMillis.length === 1) {
+    splitTimeMillis.push("0");
+  } else if (splitTimeMillis.length !== 2) {
     return undefined;
   }
 
