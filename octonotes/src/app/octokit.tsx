@@ -18,20 +18,20 @@ const NOTEMARKS_FOLDER = ".notemarks"
 // File name / path handling utils
 // ----------------------------------------------------------------------------
 
-export enum FileKind {
+export enum EntryKind {
   NoteMarkdown = "NoteMarkdown",
   Link = "Link",
   Document = "Document",
 }
 
-export function getFileKind(path: string): FileKind {
+export function getEntryKind(path: string): EntryKind {
   let extension = path.split('.').pop()?.toLowerCase();
   if (extension === "md") {
-    return FileKind.NoteMarkdown;
+    return EntryKind.NoteMarkdown;
   } else if (extension === "desktop") {
-    return FileKind.Link;
+    return EntryKind.Link;
   } else {
-    return FileKind.Document;
+    return EntryKind.Document;
   }
 }
 
@@ -250,6 +250,7 @@ export async function loadEntries(repos: Repos): Promise<Result<File, Error>[]> 
 }
 
 
+// better name: loadEntriesForRepoFromFilesList
 function combineFilesAndMeta(octokit: Octokit, repo: Repo, files: File[], metaFiles: File[]): Array<Promise<Result<Entry, Error>>> {
 
   // Build meta lookup map
@@ -306,7 +307,7 @@ export type Entry = {
   // Fields derived from filename/path
   location: string,
   title: string,
-  entryKind: FileKind,  // TODO: rename into entry kind everywhere?
+  entryKind: EntryKind,
   // From meta data:
   labels: string[],
   timeCreated: Date,
@@ -323,12 +324,12 @@ type MetaData = {
 
 
 async function loadEntry(octokit: Octokit, repo: Repo, file: File, meta: File): Promise<Result<Entry, Error>> {
-  let fileKind = getFileKind(file.path)
+  let entryKind = getEntryKind(file.path)
 
   let metaContent = await cachedFetch(octokit, repo, meta.path, meta.sha);
 
   let fileContent: Result<string, Error> | undefined = undefined
-  if (fileKind !== FileKind.Document) {
+  if (entryKind !== EntryKind.Document) {
     fileContent = await cachedFetch(octokit, repo, file.path, file.sha);
   }
 
@@ -350,7 +351,7 @@ async function loadEntry(octokit: Octokit, repo: Repo, file: File, meta: File): 
         rawUrl: file.rawUrl,
         location: location,
         title: title,
-        entryKind: fileKind,
+        entryKind: entryKind,
         labels: metaData.labels as string[],
         timeCreated: metaData.timeCreated as Date,
         timeUpdated: metaData.timeUpdated as Date,
