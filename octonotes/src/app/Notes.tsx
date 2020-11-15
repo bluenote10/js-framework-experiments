@@ -25,7 +25,7 @@ function Notes({ repos }: NotesProps) {
 
   useEffect(() => {
     async function loadContents() {
-      let contents = await octokit.loadContents(repos)
+      let entries = await octokit.loadEntries(repos)
     }
     loadContents();
   }, [repos])
