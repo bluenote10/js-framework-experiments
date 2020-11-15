@@ -9,6 +9,7 @@ import * as yaml from "js-yaml"
 
 import { Repo, Repos } from "./repo";
 import { Note } from "./types"
+import * as date_utils from "./date_utils"
 
 
 const NOTEMARKS_FOLDER = ".notemarks"
@@ -400,6 +401,8 @@ function combineFilesAndMeta(octokit: Octokit, repo: Repo, files: File[], metaFi
 
   // TODO: Should we fix filesWithMissingMeta here? Or later?
   // TODO: Return "staged changes" data structure along with entries?
+  // TODO: Make sure the cases "missing meta data" and "failed to parse meta data" are handled
+  // identically without much code duplication. Currently there is a check in loadEntry for that.
 
   let entryPromises = []
   for (let { file, meta } of filesAndMeta) {
@@ -410,15 +413,21 @@ function combineFilesAndMeta(octokit: Octokit, repo: Repo, files: File[], metaFi
   return entryPromises;
 }
 
+
 type Entry = {
+  // General fields
   repoId: string,
+  rawUrl: string,
+  // Fields derived from filename/path
   location: string,
   title: string,
+  entryKind: FileKind,  // TODO: rename into entry kind everywhere?
+  // From meta data:
   labels: string[],
   timeCreated: Date,
   timeUpdated: Date,
+  // From file content (optional):
   content: string | undefined,
-  rawUrl: string,
 }
 
 type MetaData = {
@@ -426,6 +435,7 @@ type MetaData = {
   timeCreated: Date,
   timeUpdated: Date,
 }
+
 
 async function loadEntry(octokit: Octokit, repo: Repo, file: File, meta: File): Promise<Result<Entry, Error>> {
   let fileKind = getFileKind(file.path)
@@ -442,27 +452,65 @@ async function loadEntry(octokit: Octokit, repo: Repo, file: File, meta: File): 
     let [location, filename] = splitLocationAndFilename(file.path)
     let title = filenameToTitle(filename)
 
-    // TODO: split into explicit parser with Result<MetaData>
-    let metaData = yaml.safeLoad(metaContent.value) as MetaData
+    let metaDataResult = parseMetaData(metaContent.value)
 
-    if (metaData == null) {
-      return err(new Error(`Failed to parse meta data from: ${metaContent}`))
+    if (metaDataResult.isErr()) {
+      // TODO: Actually when meta data parsing fails we should as well create a new empty meta data
+      // (similar to the case when the file doesn't exist in the first place), and stage this change.
+      return err(metaDataResult.error)
     } else {
+      let metaData = metaDataResult.value;
       return ok({
         repoId: repo.id,
+        rawUrl: file.rawUrl,
         location: location,
         title: title,
+        entryKind: fileKind,
         labels: metaData.labels as string[],
         timeCreated: metaData.timeCreated as Date,
         timeUpdated: metaData.timeUpdated as Date,
         content: fileContent?.value,
-        rawUrl: file.rawUrl,
       })
     }
   } else {
     return err(new Error(`Failed to fetch contents for ${meta.path} or ${file.path}`))
   }
 }
+
+
+function parseMetaData(content: string): Result<MetaData, Error> {
+  let metaData = yaml.safeLoad(content) as MetaData
+
+  if (metaData == null) {
+    return err(new Error("Meta data parsing returned null"));
+  } else {
+
+    let labels = Array.isArray(metaData["labels"])
+      ? metaData["labels"] as string[]
+      : undefined
+    let timeCreated = typeof metaData["timeCreated"] === "string"
+      ? date_utils.stringToDate(metaData["timeCreated"])
+      : undefined;
+    let timeUpdated = typeof metaData["timeUpdated"] === "string"
+      ? date_utils.stringToDate(metaData["timeUpdated"])
+      : undefined;
+
+    if (labels == null) {
+      return err(new Error("Meta data field 'labels' isn't an array."));
+    } else if (timeCreated == null) {
+      return err(new Error("Meta data field 'timeCreated' cannot be parsed."));
+    } else if (timeUpdated == null) {
+      return err(new Error("Meta data field 'timeUpdated' cannot be parsed."));
+    } else {
+      return ok({
+        labels: labels,
+        timeCreated: timeCreated,
+        timeUpdated: timeUpdated,
+      })
+    }
+  }
+}
+
 
 /*
 const auth = process.env.REACT_APP_AUTH;
