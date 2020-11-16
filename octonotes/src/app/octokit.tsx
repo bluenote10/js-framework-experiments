@@ -115,7 +115,7 @@ async function cachedFetch(octokit: Octokit, repo: Repo, path: string, sha: stri
   let cached = await localforage.getItem(key) as string | undefined
 
   if (cached != null) {
-    console.log(`${key} found in cached`)
+    // console.log(`${key} found in cached`)
     return ok(cached);
   } else {
     let result = await expect(octokit.repos.getContent({
@@ -222,7 +222,11 @@ type MetaData = {
 
 type StagedChange = {}
 
-// TODO: Return value must become tuple of entries, load failures, and staged changes?
+// TODO: Possible extension of return value to tuple containing:
+// - entries
+// - load errors
+// - load statistics like "X files downloaded", "Y files from cache"?
+// - staged changes
 export async function loadEntries(repos: Repos): Promise<Entry[]> {
   console.log(`Loading contents from ${repos.length} repos`)
 
@@ -297,11 +301,6 @@ function loadEntriesForRepoFromFilesList(
       meta: metaFilesMap[metaPath],
     })
   }
-
-  // TODO: Should we fix filesWithMissingMeta here? Or later?
-  // TODO: Return "staged changes" data structure along with entries?
-  // TODO: Make sure the cases "missing meta data" and "failed to parse meta data" are handled
-  // identically without much code duplication. Currently there is a check in loadEntry for that.
 
   let entryPromises = []
   for (let { file, meta } of filesAndMeta) {
