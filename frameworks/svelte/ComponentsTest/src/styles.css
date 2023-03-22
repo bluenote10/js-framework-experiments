@@ -1,0 +1,9 @@
+:root {
+	--vbox-container-separation: 4px;
+	--hbox-container-separation: 4px;
+
+	--margin-container-top: 4px;
+	--margin-container-bottom: 4px;
+	--margin-container-left: 4px;
+	--margin-container-right: 4px;
+}
