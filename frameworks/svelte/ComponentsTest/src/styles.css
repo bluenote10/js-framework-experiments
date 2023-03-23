@@ -1,3 +1,15 @@
+/*
+Notes on normalize / reset styles:
+
+Tailwind uses https://github.com/sindresorhus/modern-normalize, which is a modification
+of https://github.com/necolas/normalize.css/. Most notably it switches to border box
+sizing globally.
+
+The extra 'preflight' rules by tailwind may also be worth considering:
+https://tailwindcss.com/docs/preflight
+
+*/
+
 :root {
 	--vbox-container-separation: 4px;
 	--hbox-container-separation: 4px;
@@ -6,4 +18,22 @@
 	--margin-container-bottom: 4px;
 	--margin-container-left: 4px;
 	--margin-container-right: 4px;
+}
+
+/*
+As an alternative to having to "cascade 100% height" down the DOM,
+it may be better to use flex to achieve "full height"?
+https://stackoverflow.com/a/17067826/1804173
+*/
+
+html {
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+}
+
+body {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
 }
