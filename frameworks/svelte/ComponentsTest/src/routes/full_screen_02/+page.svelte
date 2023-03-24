@@ -3,6 +3,6 @@
 	import LongList from '$lib/dummies/LongList.svelte';
 </script>
 
-<VBoxContainer flex={1}>
+<VBoxContainer flex={1} overflowY="scroll">
 	<LongList />
 </VBoxContainer>
