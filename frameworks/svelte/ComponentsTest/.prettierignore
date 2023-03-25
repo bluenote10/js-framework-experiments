@@ -14,3 +14,4 @@ yarn.lock
 
 # Due to: https://github.com/prettier/prettier/issues/5948
 src/styles.css
+css_notes.md

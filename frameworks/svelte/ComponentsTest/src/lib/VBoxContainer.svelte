@@ -1,26 +1,26 @@
 <script lang="ts">
-	import type { Tag, Overflow } from '$lib/types';
-	import { flexComputeClassAndStyle } from './utils';
+  import type { Tag, Overflow } from "$lib/types";
+  import { flexComputeClassAndStyle } from "./utils";
 
-	export let tag: Tag = 'div';
-	export let flex: number | null = null;
-	export let overflowX: Overflow | null = null;
-	export let overflowY: Overflow | null = null;
+  export let tag: Tag = "div";
+  export let flex: number | null = null;
+  export let overflowX: Overflow | null = null;
+  export let overflowY: Overflow | null = null;
 
-	$: [clazz, style] = flexComputeClassAndStyle(flex, overflowX, overflowY);
+  $: [clazz, style] = flexComputeClassAndStyle(flex, overflowX, overflowY);
 </script>
 
 <svelte:element this={tag} class={clazz} {style}>
-	<slot />
+  <slot />
 </svelte:element>
 
 <style>
-	.self {
-		display: flex;
-		flex-direction: column;
-		row-gap: var(--vbox-container-separation);
+  .self {
+    display: flex;
+    flex-direction: column;
+    row-gap: var(--vbox-container-separation);
 
-		border: 1px solid #aaa;
-		/* background-color: aqua; */
-	}
+    border: 1px solid #aaa;
+    /* background-color: aqua; */
+  }
 </style>
