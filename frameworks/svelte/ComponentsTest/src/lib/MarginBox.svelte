@@ -1,11 +1,14 @@
 <script lang="ts">
-  import type { Tag, Overflow } from "$lib/types";
+  import type { Tag, Flex, Overflow } from "$lib/types";
   import { flexComputeClassAndStyle } from "./utils";
 
+  // General
   export let tag: Tag = "div";
-  export let flex: number | null = null;
   export let overflowX: Overflow | null = null;
   export let overflowY: Overflow | null = null;
+
+  // Flex child
+  export let flex: Flex | number | null = null;
 
   $: [clazz, style] = flexComputeClassAndStyle(flex, overflowX, overflowY);
 </script>
@@ -16,11 +19,13 @@
 
 <style>
   .self {
-    display: flex;
-    flex-direction: column;
-    row-gap: var(--vbox-container-separation);
+    display: inline-block;
+
+    padding-top: var(--margin-container-top);
+    padding-bottom: var(--margin-container-bottom);
+    padding-left: var(--margin-container-left);
+    padding-right: var(--margin-container-right);
 
     border: 1px solid #aaa;
-    /* background-color: aqua; */
   }
 </style>

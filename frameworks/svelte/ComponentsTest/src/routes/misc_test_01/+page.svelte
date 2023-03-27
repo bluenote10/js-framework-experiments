@@ -1,7 +1,7 @@
 <script>
-  import VBoxContainer from "$lib/VBoxContainer.svelte";
-  import HBoxContainer from "$lib/HBoxContainer.svelte";
-  import MarginContainer from "$lib/MarginContainer.svelte";
+  import VBox from "$lib/VBox.svelte";
+  import HBox from "$lib/HBox.svelte";
+  import MarginBox from "$lib/MarginBox.svelte";
 </script>
 
 <div>
@@ -12,42 +12,42 @@
   >
 </div>
 
-<VBoxContainer>
+<VBox>
   <div>A</div>
   <div>BBB</div>
   <div>C<br />C<br />C</div>
-</VBoxContainer>
+</VBox>
 
-<HBoxContainer>
+<HBox>
   <div>A</div>
   <div>BBB</div>
   <div>C<br />C<br />C</div>
-</HBoxContainer>
+</HBox>
 
-<MarginContainer>
+<MarginBox>
   <div>A</div>
   <div>BBB</div>
   <div>C<br />C<br />C</div>
-</MarginContainer>
+</MarginBox>
 
 <div class="restyled">
-  <VBoxContainer>
+  <VBox>
     <div>A</div>
     <div>BBB</div>
     <div>C<br />C<br />C</div>
-  </VBoxContainer>
+  </VBox>
 
-  <HBoxContainer>
+  <HBox>
     <div>A</div>
     <div>BBB</div>
     <div>C<br />C<br />C</div>
-  </HBoxContainer>
+  </HBox>
 
-  <MarginContainer>
+  <MarginBox>
     <div>A</div>
     <div>BBB</div>
     <div>C<br />C<br />C</div>
-  </MarginContainer>
+  </MarginBox>
 </div>
 
 <style>

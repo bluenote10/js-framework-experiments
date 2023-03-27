@@ -1,8 +1,8 @@
 <script>
-  import VBoxContainer from "$lib/VBoxContainer.svelte";
+  import VBox from "$lib/VBox.svelte";
   import LongList from "$lib/dummies/LongList.svelte";
 </script>
 
-<VBoxContainer flex={1} overflowY="scroll">
+<VBox flex={1} overflowY="scroll">
   <LongList />
-</VBoxContainer>
+</VBox>

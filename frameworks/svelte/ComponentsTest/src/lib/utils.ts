@@ -1,14 +1,16 @@
 import type { Flex, Overflow } from "$lib/types";
 
-export function nullify(s: string): string | null {
+export type OptString = string | undefined;
+
+export function nullify(s: string): OptString {
   if (s.length == 0) {
-    return null;
+    return undefined;
   } else {
     return s;
   }
 }
 
-export function join(...args: Array<string | null | undefined>): string | null {
+export function join(...args: Array<string | null | undefined>): OptString {
   let s = "";
   for (const arg of args) {
     if (arg != null) {
@@ -22,7 +24,7 @@ export function flexComputeClassAndStyle(
   flex: Flex | number | null,
   overflowX: Overflow | null,
   overflowY: Overflow | null,
-): [string, string | null] {
+): [string, OptString] {
   if (flex === 1) {
     flex = "1";
   }
@@ -30,10 +32,12 @@ export function flexComputeClassAndStyle(
   let clazz = "self ";
   let style = "";
 
-  if (typeof flex === "string") {
-    clazz += `flex-${flex} `;
-  } else {
-    style += `flex: ${flex}; `;
+  if (flex != null) {
+    if (typeof flex === "string") {
+      clazz += `flex-${flex} `;
+    } else {
+      style += `flex: ${flex}; `;
+    }
   }
 
   if (overflowX != null) {

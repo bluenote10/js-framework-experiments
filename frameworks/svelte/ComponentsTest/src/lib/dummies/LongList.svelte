@@ -1,17 +1,29 @@
 <script>
-  import HBoxContainer from "$lib/HBoxContainer.svelte";
-  import VBoxContainer from "$lib/VBoxContainer.svelte";
-  let data = Array.from(Array(100).keys());
+  import VBox from "$lib/VBox.svelte";
+  import HBox from "$lib/HBox.svelte";
+  import FlexChild from "$lib/FlexChild.svelte";
+
+  let n = 64;
+
+  $: data = Array.from(Array(n).keys());
+
+  const increase = () => {
+    n *= 2;
+  };
+  const decrease = () => {
+    n /= 2;
+    if (n < 1) {
+      n = 1;
+    }
+  };
 </script>
 
-<VBoxContainer tag="ul">
+<HBox>
+  <button on:click={increase}>more</button>
+  <button on:click={decrease}>less</button>
+</HBox>
+<VBox tag="ul">
   {#each data as x}
-    <HBoxContainer tag="li" flex={x}>Element {x}</HBoxContainer>
+    <FlexChild tag="li" flex={x}>Element {x}</FlexChild>
   {/each}
-</VBoxContainer>
-
-<ul>
-  {#each data as x}
-    <li>Element {x}</li>
-  {/each}
-</ul>
+</VBox>
