@@ -1,7 +1,5 @@
 <script lang="ts">
   let selected = false;
-
-  $: console.log(selected);
 </script>
 
 <div class:selected>
