@@ -1,5 +1,5 @@
 <script>
-  import Foo from "$lib/Foo.svelte";
+  import Parent from "$lib/Parent.svelte";
 </script>
 
-<Foo />
+<Parent />
