@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
 
-  // Optional children are possible by using `?` and then guarding the `@render` call
-  // below behind a conditional.
+  // Optional children are possible by using `?` and then guarding the `@render` call below behind
+  // a conditional or alternatively optional chaining like `{@render children?.()}`.
   interface Props {
     children?: Snippet;
   }
