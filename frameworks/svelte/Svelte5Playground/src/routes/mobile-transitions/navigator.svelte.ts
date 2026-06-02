@@ -1,12 +1,8 @@
-import type { Component } from "svelte";
-
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export type AnyComponent = Component<any, any, any>;
+import type { Snippet } from "svelte";
 
 export type RouteEntry = {
   id: number;
-  component: AnyComponent;
-  props: Record<string, unknown>;
+  content: Snippet;
 };
 
 let _nextId = 0;
@@ -20,13 +16,13 @@ export function getActiveId(): number {
   return _stack.length > 0 ? _stack[_stack.length - 1].id : -1;
 }
 
-export function initialize(root: AnyComponent, props: Record<string, unknown> = {}): void {
+export function initialize(content: Snippet): void {
   _nextId = 0;
-  _stack = [{ id: _nextId++, component: root, props }];
+  _stack = [{ id: _nextId++, content }];
 }
 
-export function push(component: AnyComponent, props: Record<string, unknown> = {}): void {
-  _stack = [..._stack, { id: _nextId++, component, props }];
+export function push(content: Snippet): void {
+  _stack = [..._stack, { id: _nextId++, content }];
 }
 
 export function pop(): void {

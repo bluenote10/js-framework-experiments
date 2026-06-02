@@ -7,6 +7,14 @@
   let syncEnabled = $state(true);
 </script>
 
+{#snippet advancedSettings()}
+  <DetailView title="Advanced Settings" />
+{/snippet}
+
+{#snippet privacyPolicy()}
+  <DetailView title="Privacy Policy" />
+{/snippet}
+
 <div class="view">
   <header>
     <button class="back-btn" onclick={() => pop()}>
@@ -36,11 +44,11 @@
 
     <section>
       <h2>Advanced</h2>
-      <button class="nav-row" onclick={() => push(DetailView, { title: "Advanced Settings" })}>
+      <button class="nav-row" onclick={() => push(advancedSettings)}>
         Advanced Settings
         <span class="chevron">›</span>
       </button>
-      <button class="nav-row" onclick={() => push(DetailView, { title: "Privacy Policy" })}>
+      <button class="nav-row" onclick={() => push(privacyPolicy)}>
         Privacy Policy
         <span class="chevron">›</span>
       </button>

@@ -3,15 +3,14 @@
 
   interface Props {
     title: string;
+    // Optional so this component can be used both as a rich article view
+    // (from HomeView, with full props) and as a plain detail view (from
+    // SettingsView, with only a title).
+    excerpt?: string;
+    bookmarked?: boolean;
+    onToggleBookmark?: () => void;
   }
-  let { title }: Props = $props();
-
-  const paragraphs = [
-    "This is a detail screen pushed onto the navigation stack. The previous screen is still mounted in the DOM — it just has the inert attribute, which blocks pointer events and focus without affecting visual rendering.",
-    "When you tap the back button, this view plays an out:fly transition sliding to the right, while the screen beneath it is already in place.",
-    "The Navigator component does all the orchestration: it keeps multiple route divs in the DOM, assigns z-index by stack position, and sets inert on everything except the top route.",
-    "This architecture closely mirrors Flutter's Navigator widget — individual screens are passive content, and the navigation system owns timing, animation, and interaction blocking.",
-  ];
+  let { title, excerpt, bookmarked = false, onToggleBookmark }: Props = $props();
 </script>
 
 <div class="view">
@@ -20,11 +19,49 @@
       <span class="back-chevron">‹</span> Back
     </button>
     <h1>{title}</h1>
+    {#if onToggleBookmark}
+      <!--
+        Events up: clicking calls onToggleBookmark(), which is a closure
+        defined in HomeView that mutates HomeView's $state. Because HomeView
+        stays mounted (just inert), its article list updates immediately —
+        the ★ appears in the list before you even go back.
+      -->
+      <button
+        class="bookmark-btn"
+        class:active={bookmarked}
+        onclick={onToggleBookmark}
+        aria-label={bookmarked ? "Remove bookmark" : "Bookmark"}
+      >
+        {bookmarked ? "★" : "☆"}
+      </button>
+    {:else}
+      <span></span>
+    {/if}
   </header>
   <main>
-    {#each paragraphs as paragraph, i (i)}
-      <p>{paragraph}</p>
-    {/each}
+    {#if excerpt}
+      <p class="excerpt">{excerpt}</p>
+    {/if}
+
+    <section class="data-flow-note">
+      <h2>How the data got here</h2>
+      <dl>
+        <dt>Props down</dt>
+        <dd>
+          <code>title</code>, <code>excerpt</code>, and <code>bookmarked</code> were passed through
+          a <code>&#123;#snippet&#125;</code> closure defined inside a
+          <code>&#123;#each&#125;</code> block in HomeView. Each list item gets its own closure — no snippet
+          parameters needed; the variables are captured reactively from the loop.
+        </dd>
+        <dt>Events up</dt>
+        <dd>
+          <code>onToggleBookmark</code> is a callback prop:
+          <code>() =&gt; (article.bookmarked = !article.bookmarked)</code>. Calling it mutates
+          HomeView's <code>$state</code> directly. Because HomeView stays mounted (it's just
+          <code>inert</code>), its list already shows the ★ before you tap Back.
+        </dd>
+      </dl>
+    </section>
   </main>
 </div>
 
@@ -53,6 +90,7 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding: 0 8px;
   }
 
   .back-btn {
@@ -73,18 +111,79 @@
     margin-top: -2px;
   }
 
+  .bookmark-btn {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    cursor: pointer;
+    color: #ccc;
+    padding: 4px;
+    justify-self: end;
+    transition: color 0.15s;
+  }
+
+  .bookmark-btn.active {
+    color: #f59e0b;
+  }
+
   main {
     flex: 1;
     padding: 20px;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
   }
 
-  p {
+  .excerpt {
     margin: 0;
+    font-size: 1rem;
     line-height: 1.6;
     color: #333;
+    font-style: italic;
+    border-left: 3px solid #e0e0e0;
+    padding-left: 12px;
+  }
+
+  .data-flow-note {
+    background: #f8f8f8;
+    border-radius: 8px;
+    padding: 16px;
+  }
+
+  h2 {
+    margin: 0 0 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #888;
+  }
+
+  dl {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  dt {
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 2px;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #555;
+    line-height: 1.5;
+  }
+
+  dd code {
+    background: #ececec;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 0.75rem;
   }
 </style>

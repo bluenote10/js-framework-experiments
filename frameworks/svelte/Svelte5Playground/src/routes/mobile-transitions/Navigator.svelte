@@ -1,24 +1,31 @@
 <script lang="ts">
-  import { getStack, getActiveId } from "./navigator.svelte";
+  import type { Snippet } from "svelte";
   import { fly } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
+  import { untrack } from "svelte";
+  import { getStack, getActiveId, initialize } from "./navigator.svelte";
+
+  interface Props {
+    initial: Snippet;
+  }
+  let { initial }: Props = $props();
+
+  // Initialize once on creation. untrack() makes the intent explicit: we
+  // deliberately capture only the initial value, not future prop changes.
+  untrack(() => initialize(initial));
 
   let navEl = $state<HTMLElement | null>(null);
   let navWidth = $state(390);
-
   const stack = $derived(getStack());
   const activeId = $derived(getActiveId());
 
   $effect(() => {
-    if (navEl) {
-      navWidth = navEl.clientWidth;
-    }
+    if (navEl) navWidth = navEl.clientWidth;
   });
 </script>
 
 <div class="navigator" bind:this={navEl}>
   {#each stack as route, i (route.id)}
-    {@const RouteComponent = route.component}
     <div
       class="route"
       style:z-index={i}
@@ -31,7 +38,7 @@
       }}
       out:fly={{ x: navWidth, duration: 300, opacity: 1, easing: cubicOut }}
     >
-      <RouteComponent {...route.props} />
+      {@render route.content()}
     </div>
   {/each}
 </div>
