@@ -3,7 +3,7 @@
   import { fly } from "svelte/transition";
   import { cubicOut } from "svelte/easing";
   import { untrack } from "svelte";
-  import { getStack, getActiveId, initialize } from "./navigator.svelte";
+  import { getStack, getActiveId, initialize, syncToDepth } from "./navigator.svelte";
 
   interface Props {
     initial: Snippet;
@@ -21,6 +21,15 @@
 
   $effect(() => {
     if (navEl) navWidth = navEl.clientWidth;
+  });
+
+  $effect(() => {
+    function onPopState(e: PopStateEvent) {
+      const state = e.state as { navigatorDepth?: number } | null;
+      syncToDepth(state?.navigatorDepth ?? 1);
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
   });
 </script>
 
